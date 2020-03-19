@@ -16,32 +16,27 @@
 
 import * as C from './Common';
 import * as I from './Internal';
-import * as E from './Errors';
 
 class MoloModule implements I.IModule {
 
-    private _component!: I.IComponent;
+    private _components!: Map<any, I.IComponent>;
 
     public constructor(module: NodeJS.Module) {
 
         module.exports.__molo = this;
+        this._components = new Map();
     }
 
-    public getComponent(): I.IComponent {
+    public getComponents(): I.IComponent[] {
 
-        return this._component;
+        return Array.from(this._components.values());
     }
 
     public Component(opts: Partial<C.IComponentOptions<any>> = {}): ClassDecorator {
 
         return <T extends Function>(target: T): void | T => {
 
-            if (this._component) {
-
-                throw new E.E_MULTI_COMPONENT_IN_FILE();
-            }
-
-            this._component = {
+            this._components.set(target, {
                 'options': {
                     'name': opts.name ?? '',
                     'depends': opts.depends ?? {},
@@ -53,7 +48,7 @@ class MoloModule implements I.IModule {
                     'provides': opts.provides ?? ''
                 },
                 'ctor': target as any
-            };
+            });
 
             return target;
         };

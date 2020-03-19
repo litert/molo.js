@@ -250,32 +250,58 @@ class Hub implements C.IHub {
 
         this._validateDotPath(dotPath);
 
-        let lastDotPos = dotPath.lastIndexOf('.');
+        let coms = molo.getComponents();
 
-        const relNSDotPath = dotPath.slice(namespace.fullName.length + 1, lastDotPos);
-
-        let ns: INamespace;
-
-        if (relNSDotPath) {
-
-            ns = this._addNamespace(relNSDotPath, namespace);
-        }
-        else {
-
-            ns = namespace;
-        }
-
-        let coms = molo.getComponent();
-
-        if (!coms) {
+        if (!coms.length) {
 
             return;
         }
 
-        if (!coms.options.name) {
+        let ns: INamespace;
 
-            coms.options.name = dotPath.slice(lastDotPos + 1);
+        if (coms.length === 1) {
+
+            const lastDotPos = dotPath.lastIndexOf('.');
+
+            const relNSDotPath = dotPath.slice(namespace.fullName.length + 1, lastDotPos);
+
+            if (relNSDotPath) {
+
+                ns = this._addNamespace(relNSDotPath, namespace);
+            }
+            else {
+
+                ns = namespace;
+            }
+
+            if (!coms[0].options.name) {
+
+                coms[0].options.name = dotPath.slice(lastDotPos + 1);
+            }
+
+            this._registerComponent(coms[0], ns, dotPath);
         }
+        else {
+
+            ns = this._addNamespace(dotPath.slice(namespace.fullName.length + 1), namespace);
+
+            for (const item of coms) {
+
+                if (!item.options.name) {
+
+                    item.options.name = item.ctor.name;
+                }
+
+                this._registerComponent(item, ns, `${dotPath}.${item.options.name}`);
+            }
+        }
+    }
+
+    private _registerComponent(
+        coms: I.IComponent,
+        ns: INamespace,
+        dotPath: string,
+    ): void {
 
         ns.components[coms.options.name] = coms;
 

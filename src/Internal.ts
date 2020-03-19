@@ -25,5 +25,5 @@ export interface IComponent {
 
 export interface IModule extends C.IModule {
 
-    getComponent(): IComponent;
+    getComponents(): IComponent[];
 }

@@ -32,13 +32,6 @@ export const E_OBJECT_NOT_DECLARATION = ErrorHub.define(
     {}
 );
 
-export const E_MULTI_COMPONENT_IN_FILE = ErrorHub.define(
-    null,
-    'E_MULTI_COMPONENT_IN_FILE',
-    'Only one component is allowed in one file.',
-    {}
-);
-
 export const E_DUP_OBJECT_DECLARATION = ErrorHub.define(
     null,
     'E_DUP_OBJECT_DECLARATION',
