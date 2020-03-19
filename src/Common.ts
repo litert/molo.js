@@ -50,6 +50,11 @@ export interface ICreateObjectOptions {
     provider?: string;
 
     parameters?: Record<string, any>;
+
+    /**
+     * The initial objects pool.
+     */
+    objects?: Record<string, any>;
 }
 
 export interface IComponentOptions<T> {
@@ -126,9 +131,16 @@ export interface IProvideResult<T> {
     singleton?: boolean;
 }
 
+export interface IProvideOptions<A> {
+
+    parameters: A;
+
+    target: string;
+}
+
 export interface IProvider<T, A> {
 
-    provide(args: A): Promise<IProvideResult<T>> | IProvideResult<T>;
+    provide(opts: IProvideOptions<A>): Promise<IProvideResult<T>> | IProvideResult<T>;
 }
 
 export interface IBootable {

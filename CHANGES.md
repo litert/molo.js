@@ -1,5 +1,10 @@
 # Changes Logs
 
+## v0.1.3
+
+- Added initial objects bucket supports.
+- Added wildcard provider supports.
+
 ## v0.1.2
 
 - Allowed multi-components in single .js file.

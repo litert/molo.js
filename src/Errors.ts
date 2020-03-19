@@ -46,6 +46,13 @@ export const E_INVALID_DOT_PATH = ErrorHub.define(
     {}
 );
 
+export const E_INVALID_PROVIDE_PATH = ErrorHub.define(
+    null,
+    'E_INVALID_PROVIDE_PATH',
+    'The provided path is invalid.',
+    {}
+);
+
 export const E_INVALID_OBJECT_NAME = ErrorHub.define(
     null,
     'E_INVALID_OBJECT_NAME',

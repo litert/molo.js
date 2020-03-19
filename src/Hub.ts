@@ -20,6 +20,7 @@ import * as I from './Internal';
 import * as E from './Errors';
 
 const REGEXP_DOT_PATH = /^[A-Za-z0-9]\w*(\.[A-Za-z0-9]\w*)*$/;
+const REGEXP_PROVIDE_PATH = /^[A-Za-z0-9]\w*(\.[A-Za-z0-9]\w*)*(\.\*)?$/;
 const REGEXP_DEPEND_PATH = /^&?[A-Za-z0-9]\w*(\.[A-Za-z0-9]\w*)*(\.\*)?$/;
 
 const REGEXP_OBJECT_NAME = /^@@?\w+(\.\w+)*$/;
@@ -55,6 +56,8 @@ class Hub implements C.IHub {
     private _namedObjectConfigs: Record<string, C.ICreateObjectOptions> = {};
 
     private _providers: Record<string, string[]> = {};
+
+    private _wilecardProviders: Array<[RegExp, string]> = [];
 
     private _imported: string[] = [];
 
@@ -110,6 +113,14 @@ class Hub implements C.IHub {
         if (!REGEXP_DOT_PATH.test(path)) {
 
             throw new E.E_INVALID_DOT_PATH();
+        }
+    }
+
+    private _validateProvidePath(path: string): void {
+
+        if (!REGEXP_PROVIDE_PATH.test(path)) {
+
+            throw new E.E_INVALID_PROVIDE_PATH();
         }
     }
 
@@ -307,14 +318,24 @@ class Hub implements C.IHub {
 
         if (coms.options.provides) {
 
-            this._validateDotPath(coms.options.provides);
+            this._validateProvidePath(coms.options.provides);
 
-            if (!this._providers[coms.options.provides]) {
+            if (coms.options.provides.endsWith('.*')) {
 
-                this._providers[coms.options.provides] = [];
+                this._wilecardProviders.push([
+                    new RegExp(`^${coms.options.provides.replace(/\./g, '\\.').slice(0, -1)}`),
+                    dotPath
+                ]);
             }
+            else {
 
-            this._providers[coms.options.provides].push(dotPath);
+                if (!this._providers[coms.options.provides]) {
+
+                    this._providers[coms.options.provides] = [];
+                }
+
+                this._providers[coms.options.provides].push(dotPath);
+            }
         }
 
         if (coms.options.depends) {
@@ -402,7 +423,7 @@ class Hub implements C.IHub {
             'stack': [],
             'target': opts.target,
             'component': null as any,
-            'objects': {},
+            'objects': opts.objects ?? {},
             'types': opts.types ?? [],
             'parameters': opts.parameters ?? {},
             'name': opts.name ?? '',
@@ -434,18 +455,20 @@ class Hub implements C.IHub {
 
         let provider = ctx.provider;
 
-        if (provider) {
-
-            if (!this._providers[ctx.target] || !this._providers[ctx.target].includes(provider)) {
-
-                throw new E.E_MISUSED_PROVIDER({
-                    metadata: { provider: ctx.provider, component: ctx.target }
-                });
-            }
-        }
-        else {
+        if (!provider) {
 
             provider = this._providers[ctx.target]?.[0];
+
+            if (!provider) {
+
+                for (const r of this._wilecardProviders) {
+
+                    if (r[0].test(ctx.target)) {
+
+                        return this._getObjectByProvider(r[1], ctx, true);
+                    }
+                }
+            }
         }
 
         if (provider) {
@@ -633,9 +656,22 @@ class Hub implements C.IHub {
         return ret;
     }
 
-    private async _getObjectByProvider(provider: string, ctx: IConstructContext): Promise<any> {
+    private async _getObjectByProvider(provider: string, ctx: IConstructContext, wildcard?: boolean): Promise<any> {
 
-        const pdrObj = await this._getObject({
+        const providerComponent = this._getComponent(provider);
+
+        if (!wildcard && providerComponent.options.provides !== ctx.target) {
+
+            throw new E.E_MISUSED_PROVIDER({
+                metadata: {
+                    stack: ctx.stack,
+                    provider,
+                    target: ctx.target
+                }
+            });
+        }
+
+        const pdrObj: C.IProvider<any, any> = await this._getObject({
             'component': null as any,
             'name': '',
             'objects': ctx.objects,
@@ -646,7 +682,10 @@ class Hub implements C.IHub {
             'types': [],
         });
 
-        let result = pdrObj.provide(ctx.parameters) as C.IProvideResult<{}>;
+        let result = pdrObj.provide({
+            parameters: ctx.parameters,
+            target: ctx.target
+        }) as C.IProvideResult<{}>;
 
         if (result instanceof Promise) {
 
