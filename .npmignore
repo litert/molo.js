@@ -1,0 +1,9 @@
+/.vscode/
+/.git/
+/node_modules/
+/.gitignore
+/.npmignore
+/tsconfig.json
+/docs/
+/.eslintrc
+/examples/
