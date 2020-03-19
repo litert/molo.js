@@ -18,8 +18,8 @@ export * from './Common';
 export * from './Hub';
 export * from './SimpleScanner';
 
-import { Molo } from './Module';
+import { createModule } from './Module';
 
-export default Molo;
+export default createModule;
 
-export { Molo };
+export { createModule };

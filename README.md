@@ -7,6 +7,8 @@
 
 The DI and IoC implementation for LiteRT.
 
+> The package is still under development, any feature could possibly be changed before `v1.0.0`.
+
 ## Installation
 
 ```sh
