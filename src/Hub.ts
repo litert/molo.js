@@ -366,7 +366,7 @@ class Hub implements C.IHub {
                         if (this._namedObjectConfigs[dep.name]) {
 
                             throw new E.E_DUP_OBJECT_DECLARATION({
-                                metadata: { name: dep.name }
+                                metadata: { name: dep.name, component: dotPath }
                             });
                         }
 
@@ -406,7 +406,8 @@ class Hub implements C.IHub {
             'parameters': {},
             'name': '',
             'provider': '',
-            'component': entryCom
+            'component': entryCom,
+            'optional': false
         });
 
         if (entryObj.main === undefined) {
@@ -427,11 +428,18 @@ class Hub implements C.IHub {
             'types': opts.types ?? [],
             'parameters': opts.parameters ?? {},
             'name': opts.name ?? '',
-            'provider': opts.provider ?? ''
+            'provider': opts.provider ?? '',
+            'optional': opts.optional ?? false
         });
     }
 
     private async _getObject(ctx: IConstructContext): Promise<any> {
+
+        if (ctx.target.startsWith('?')) {
+
+            ctx.target = ctx.target.slice(1);
+            ctx.optional = true;
+        }
 
         if (ctx.target.startsWith('@')) {
 
@@ -538,6 +546,7 @@ class Hub implements C.IHub {
                 'stack': ctx.stack,
                 'target': fullName,
                 'types': [],
+                'optional': ctx.optional
             });
         }
 
@@ -596,12 +605,32 @@ class Hub implements C.IHub {
 
         if (!ctx.component) {
 
-            ctx.component = this._getComponent(ctx.target);
+            try {
+
+                ctx.component = this._getComponent(ctx.target);
+            }
+            catch (e) {
+
+                if (e instanceof E.E_COMPONENT_NOT_FOUND && ctx.optional) {
+
+                    return null;
+                }
+
+                throw e;
+            }
         }
 
-        if (ctx.component.options.singleton && this._singletons[ctx.target]) {
+        if (ctx.component.options.singleton) {
 
-            return this._singletons[ctx.target];
+            if (ctx.objects[ctx.target]) {
+
+                return ctx.objects[ctx.target];
+            }
+
+            if (this._singletons[ctx.target]) {
+
+                return this._singletons[ctx.target];
+            }
         }
 
         if (ctx.component.options.deprecated) {
@@ -629,6 +658,7 @@ class Hub implements C.IHub {
                     'stack': [...ctx.stack, ctx.target],
                     'target': dep,
                     'types': [],
+                    'optional': false
                 });
             }
             else {
@@ -642,15 +672,20 @@ class Hub implements C.IHub {
                     'stack': [...ctx.stack, ctx.target],
                     'target': dep.target,
                     'types': dep.types ?? [],
+                    'optional': dep.optional ?? false,
                 });
             }
         }
 
         let ret = new ctx.component.ctor(deps, ctx.parameters);
 
-        if (ctx.component.options.singleton) {
+        if (ctx.component.options.singleton === true) {
 
             this._singletons[ctx.target] = ret;
+        }
+        else if (ctx.component.options.singleton === 'context') {
+
+            ctx.objects[ctx.target] = ret;
         }
 
         return ret;
@@ -679,6 +714,7 @@ class Hub implements C.IHub {
             'provider': '',
             'stack': [...ctx.stack, ctx.target],
             'target': provider,
+            'optional': false,
             'types': [],
         });
 
@@ -730,6 +766,7 @@ class Hub implements C.IHub {
             'stack': [...ctx.stack, ctx.target],
             'target': objCfg.target,
             'types': objCfg.types ?? [],
+            'optional': ctx.optional || (objCfg.optional ?? false)
         });
 
         if (ctx.target[1] === '@') {

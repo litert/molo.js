@@ -55,6 +55,11 @@ export interface ICreateObjectOptions {
      * The initial objects pool.
      */
     objects?: Record<string, any>;
+
+    /**
+     * Mark as an optional dependency.
+     */
+    optional?: boolean;
 }
 
 export interface IComponentOptions<T> {
@@ -74,7 +79,7 @@ export interface IComponentOptions<T> {
     /**
      * Mark this as a singleton.
      */
-    singleton: boolean;
+    singleton: boolean | 'context';
 
     /**
      * Specify the target this provider could provides, and mark this component as a provider.

@@ -1,5 +1,10 @@
 # Changes Logs
 
+## v0.1.4
+
+- Added optional supports.
+- Added context singleton supports.
+
 ## v0.1.3
 
 - Added initial objects bucket supports.

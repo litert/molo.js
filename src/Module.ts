@@ -41,7 +41,7 @@ class MoloModule implements I.IModule {
                     'name': opts.name ?? '',
                     'depends': opts.depends ?? {},
                     'imports': opts.imports ?? [],
-                    'singleton': !!opts.singleton,
+                    'singleton': opts.singleton ?? false,
                     'type': opts.type ?? [],
                     'deprecated': opts.deprecated ?? '',
                     'bootable': !!opts.bootable,
