@@ -1,6 +1,6 @@
 {
   "name": "@litert/molo",
-  "version": "0.1.4",
+  "version": "0.1.6",
   "description": "The DI and IoC implementation for LiteRT.",
   "main": "lib/index.js",
   "scripts": {

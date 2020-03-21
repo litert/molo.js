@@ -133,7 +133,7 @@ export interface IProvideResult<T> {
 
     object: T;
 
-    singleton?: boolean;
+    singleton?: IComponentOptions<any>['singleton'];
 }
 
 export interface IProvideOptions<A> {

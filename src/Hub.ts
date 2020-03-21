@@ -728,9 +728,13 @@ class Hub implements C.IHub {
             result = await result;
         }
 
-        if (result.singleton) {
+        if (result.singleton === true) {
 
             this._singletons[ctx.target] = result.object;
+        }
+        else if (result.singleton === 'context') {
+
+            ctx.objects[ctx.target] = result.object;
         }
 
         return result.object;

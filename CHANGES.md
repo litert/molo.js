@@ -1,6 +1,10 @@
 # Changes Logs
 
-## v0.1.4
+## v0.1.6
+
+- Fixed context singleton for provided result.
+
+## v0.1.5
 
 - Added optional supports.
 - Added context singleton supports.
