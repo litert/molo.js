@@ -45,7 +45,7 @@ interface INamespace {
     components: Record<string, I.IComponent>;
 }
 
-class Hub implements C.IHub {
+class MoloContainer implements C.IContainer {
 
     private _ns: INamespace = { fullName: '', namespaces: {}, components: {} };
 
@@ -53,7 +53,7 @@ class Hub implements C.IHub {
 
     private _singletons: Record<string, any>;
 
-    private _namedObjectConfigs: Record<string, C.ICreateObjectOptions> = {};
+    private _namedObjectConfigs: Record<string, I.IComponentDepend> = {};
 
     private _providers: Record<string, string[]> = {};
 
@@ -64,7 +64,7 @@ class Hub implements C.IHub {
     public constructor() {
 
         this._singletons = {
-            'Molo.Hub': this
+            'Molo.Container': this
         };
     }
 
@@ -76,7 +76,7 @@ class Hub implements C.IHub {
         }
 
         let packageJson: Record<'molo', string>;
-        let moloLoader: (molo: C.IHub) => void;
+        let moloLoader: (molo: C.IContainer) => void;
 
         try {
 
@@ -272,6 +272,13 @@ class Hub implements C.IHub {
 
         if (coms.length === 1) {
 
+            const item = coms.values().next().value;
+
+            if (!item.options.info) {
+
+                return;
+            }
+
             const lastDotPos = dotPath.lastIndexOf('.');
 
             const relNSDotPath = dotPath.slice(namespace.fullName.length + 1, lastDotPos);
@@ -285,25 +292,30 @@ class Hub implements C.IHub {
                 ns = namespace;
             }
 
-            if (!coms[0].options.name) {
+            if (!item.options.info.name) {
 
-                coms[0].options.name = dotPath.slice(lastDotPos + 1);
+                item.options.info.name = dotPath.slice(lastDotPos + 1);
             }
 
-            this._registerComponent(coms[0], ns, dotPath);
+            this._registerComponent(item, ns, dotPath);
         }
         else {
 
             ns = this._addNamespace(dotPath.slice(namespace.fullName.length + 1), namespace);
 
-            for (const item of coms) {
+            for (const item of coms.values()) {
 
-                if (!item.options.name) {
+                if (!item.options.info) {
 
-                    item.options.name = item.ctor.name;
+                    return;
                 }
 
-                this._registerComponent(item, ns, `${dotPath}.${item.options.name}`);
+                if (!item.options.info.name) {
+
+                    item.options.info.name = item.ctor.name;
+                }
+
+                this._registerComponent(item, ns, `${dotPath}.${item.options.info.name}`);
             }
         }
     }
@@ -314,76 +326,58 @@ class Hub implements C.IHub {
         dotPath: string,
     ): void {
 
-        ns.components[coms.options.name] = coms;
+        ns.components[coms.options.info.name] = coms;
 
-        if (coms.options.provides) {
+        if (coms.options.info.provides) {
 
-            this._validateProvidePath(coms.options.provides);
+            this._validateProvidePath(coms.options.info.provides);
 
-            if (coms.options.provides.endsWith('.*')) {
+            if (coms.options.info.provides.endsWith('.*')) {
 
                 this._wilecardProviders.push([
-                    new RegExp(`^${coms.options.provides.replace(/\./g, '\\.').slice(0, -1)}`),
+                    new RegExp(`^${coms.options.info.provides.replace(/\./g, '\\.').slice(0, -1)}`),
                     dotPath
                 ]);
             }
             else {
 
-                if (!this._providers[coms.options.provides]) {
+                if (!this._providers[coms.options.info.provides]) {
 
-                    this._providers[coms.options.provides] = [];
+                    this._providers[coms.options.info.provides] = [];
                 }
 
-                this._providers[coms.options.provides].push(dotPath);
+                this._providers[coms.options.info.provides].push(dotPath);
             }
         }
 
         if (coms.options.depends) {
 
-            for (let k in coms.options.depends) {
+            for (let dep of coms.options.depends) {
 
-                const dep = coms.options.depends[k];
+                this._validateDependPath(dep.target);
 
-                if (typeof dep === 'string') {
+                if (dep.name) {
 
-                    if (dep.startsWith('@')) {
+                    this._validateObjectName(dep.name);
 
-                        this._validateObjectName(dep);
+                    if (this._namedObjectConfigs[dep.name]) {
+
+                        throw new E.E_DUP_OBJECT_DECLARATION({
+                            metadata: { name: dep.name, component: dotPath }
+                        });
                     }
-                    else {
 
-                        this._validateDependPath(dep);
-                    }
+                    this._namedObjectConfigs[dep.name] = dep;
                 }
-                else {
 
-                    this._validateDependPath(dep.target);
+                if (dep.provider) {
 
-                    if (dep.name) {
-
-                        this._validateObjectName(dep.name);
-
-                        if (this._namedObjectConfigs[dep.name]) {
-
-                            throw new E.E_DUP_OBJECT_DECLARATION({
-                                metadata: { name: dep.name, component: dotPath }
-                            });
-                        }
-
-                        this._namedObjectConfigs[dep.name] = dep;
-
-                        coms.options.depends[k] = dep.name;
-                    }
-
-                    if (dep.provider) {
-
-                        this._validateDotPath(dep.provider);
-                    }
+                    this._validateDotPath(dep.provider);
                 }
             }
         }
 
-        for (const mName of coms.options.imports) {
+        for (const mName of coms.options.info.imports) {
 
             this.import(mName);
         }
@@ -393,7 +387,7 @@ class Hub implements C.IHub {
 
         let entryCom = this._getComponent(opts.entry);
 
-        if (!entryCom.options.bootable) {
+        if (!entryCom.options.info.bootable) {
 
             throw new E.E_COMPONENT_NOT_BOOTABLE({ metadata: { entry: opts.entry } });
         }
@@ -402,7 +396,7 @@ class Hub implements C.IHub {
             'stack': [],
             'target': opts.entry,
             'objects': {},
-            'types': [],
+            'interface': [],
             'parameters': {},
             'name': '',
             'provider': '',
@@ -418,14 +412,14 @@ class Hub implements C.IHub {
         return entryObj.main(opts.args);
     }
 
-    public async getObject(opts: C.ICreateObjectOptions): Promise<any> {
+    public async getObject(opts: C.TCreateInputType<C.ICreateObjectOptions, 'target'>): Promise<any> {
 
         return this._getObject({
             'stack': [],
             'target': opts.target,
             'component': null as any,
             'objects': opts.objects ?? {},
-            'types': opts.types ?? [],
+            'interface': opts.interface ?? [],
             'parameters': opts.parameters ?? {},
             'name': opts.name ?? '',
             'provider': opts.provider ?? '',
@@ -500,7 +494,7 @@ class Hub implements C.IHub {
 
         const filters: Record<string, boolean> = {};
 
-        for (let x of ctx.types) {
+        for (let x of ctx.interface) {
 
             filters[x] = true;
         }
@@ -509,13 +503,13 @@ class Hub implements C.IHub {
 
             const ns = this._getNamespace(prefix.slice(1, -1));
 
-            await this._getComponentsInNamespaceR(ns, ctx, ret, ctx.types.length ? filters : undefined);
+            await this._getComponentsInNamespaceR(ns, ctx, ret, ctx.interface.length ? filters : undefined);
         }
         else {
 
             const ns = this._getNamespace(prefix.slice(0, -1));
 
-            await this._getObjectsInNamespaceR(ns, ctx, ret, ctx.types.length ? filters : undefined);
+            await this._getObjectsInNamespaceR(ns, ctx, ret, ctx.interface.length ? filters : undefined);
         }
 
         return ret;
@@ -532,7 +526,7 @@ class Hub implements C.IHub {
 
             const fullName = `${ns.fullName}.${x}`;
 
-            if (filter && !ns.components[x].options.type.some((v) => filter[v])) {
+            if (filter && !ns.components[x].options.info.type.some((v) => filter[v])) {
 
                 continue;
             }
@@ -545,7 +539,7 @@ class Hub implements C.IHub {
                 'provider': '',
                 'stack': ctx.stack,
                 'target': fullName,
-                'types': [],
+                'interface': [],
                 'optional': ctx.optional
             });
         }
@@ -572,7 +566,7 @@ class Hub implements C.IHub {
 
             const fullName = `${ns.fullName}.${x}`;
 
-            if (filter && !ns.components[x].options.type.some((v) => filter[v])) {
+            if (filter && !ns.components[x].options.info.type.some((v) => filter[v])) {
 
                 continue;
             }
@@ -620,7 +614,7 @@ class Hub implements C.IHub {
             }
         }
 
-        if (ctx.component.options.singleton) {
+        if (ctx.component.options.info.singleton) {
 
             if (ctx.objects[ctx.target]) {
 
@@ -633,57 +627,67 @@ class Hub implements C.IHub {
             }
         }
 
-        if (ctx.component.options.deprecated) {
+        if (ctx.component.options.info.deprecated) {
 
             E.ErrorHub.warn(new E.E_COMPONENT_DEPRECATED({
-                message: `Compoonent '${ctx.target}' has been deprecated: ${ctx.component.options.deprecated}.`,
-                metadata: { path: ctx.target, deprecated: ctx.component.options.deprecated }
+                message: `Compoonent '${ctx.target}' has been deprecated: ${ctx.component.options.info.deprecated}.`,
+                metadata: { path: ctx.target, deprecated: ctx.component.options.info.deprecated }
             }));
         }
 
-        let deps: Record<string, any> = {};
+        let inject4CtorParams: any[] = Array(ctx.component.ctor.length);
+        let inject4Props: Record<string, any> = {};
+        let inject4Setters: Record<string, any> = {};
 
-        for (const dVar in ctx.component.options.depends) {
+        for (const dVar of ctx.component.options.depends) {
 
-            const dep = ctx.component.options.depends[dVar];
+            const varVal = await this._getObject({
+                'component': null as any,
+                'name': '',
+                'objects': ctx.objects,
+                'parameters': dVar.parameters ?? {},
+                'provider': dVar.provider ?? '',
+                'stack': [...ctx.stack, ctx.target],
+                'target': dVar.target,
+                'interface': dVar.interface ?? [],
+                'optional': dVar.optional ?? false,
+            });
 
-            if (typeof dep === 'string') {
+            switch (dVar.injectType) {
+                case I.EInjectType.CTOR_PARAM:
 
-                deps[dVar] = await this._getObject({
-                    'component': null as any,
-                    'name': '',
-                    'objects': ctx.objects,
-                    'parameters': {},
-                    'provider': '',
-                    'stack': [...ctx.stack, ctx.target],
-                    'target': dep,
-                    'types': [],
-                    'optional': false
-                });
-            }
-            else {
+                    inject4CtorParams[dVar.injectPos as number] = varVal;
+                    break;
 
-                deps[dVar] = await this._getObject({
-                    'component': null as any,
-                    'name': '',
-                    'objects': ctx.objects,
-                    'parameters': dep.parameters ?? {},
-                    'provider': dep.provider ?? '',
-                    'stack': [...ctx.stack, ctx.target],
-                    'target': dep.target,
-                    'types': dep.types ?? [],
-                    'optional': dep.optional ?? false,
-                });
+                case I.EInjectType.PROP:
+
+                    inject4Props[dVar.injectPos as string] = varVal;
+                    break;
+
+                case I.EInjectType.SETTER_FN:
+
+                    inject4Setters[dVar.injectPos as number] = varVal;
+                    break;
             }
         }
 
-        let ret = new ctx.component.ctor(deps, ctx.parameters);
+        let ret = new ctx.component.ctor(...inject4CtorParams);
 
-        if (ctx.component.options.singleton === true) {
+        for (let k in inject4Props) {
+
+            ret[k] = inject4Props[k];
+        }
+
+        for (let k in inject4Setters) {
+
+            ret[k](inject4Setters[k]);
+        }
+
+        if (ctx.component.options.info.singleton === true) {
 
             this._singletons[ctx.target] = ret;
         }
-        else if (ctx.component.options.singleton === 'context') {
+        else if (ctx.component.options.info.singleton === 'context') {
 
             ctx.objects[ctx.target] = ret;
         }
@@ -695,7 +699,7 @@ class Hub implements C.IHub {
 
         const providerComponent = this._getComponent(provider);
 
-        if (!wildcard && providerComponent.options.provides !== ctx.target) {
+        if (!wildcard && providerComponent.options.info.provides !== ctx.target) {
 
             throw new E.E_MISUSED_PROVIDER({
                 metadata: {
@@ -715,7 +719,7 @@ class Hub implements C.IHub {
             'stack': [...ctx.stack, ctx.target],
             'target': provider,
             'optional': false,
-            'types': [],
+            'interface': [],
         });
 
         let result = pdrObj.provide({
@@ -769,7 +773,7 @@ class Hub implements C.IHub {
             'provider': objCfg.provider ?? '',
             'stack': [...ctx.stack, ctx.target],
             'target': objCfg.target,
-            'types': objCfg.types ?? [],
+            'interface': objCfg.interface ?? [],
             'optional': ctx.optional || (objCfg.optional ?? false)
         });
 
@@ -786,7 +790,7 @@ class Hub implements C.IHub {
     }
 }
 
-export function createHub(): C.IHub {
+export function createContainer(): C.IContainer {
 
-    return new Hub();
+    return new MoloContainer();
 }

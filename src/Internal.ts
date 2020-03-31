@@ -16,9 +16,31 @@
 
 import * as C from './Common';
 
+export enum EInjectType {
+    CTOR_PARAM,
+    PROP,
+    SETTER_FN
+}
+
+export interface ICreateObjectOptions extends C.ICreateObjectOptions {
+
+    injectPos: string | number;
+
+    injectType: EInjectType;
+}
+
+export type IComponentDepend = C.TCreateInputType<ICreateObjectOptions, 'target' | 'injectPos' | 'injectType'>;
+
+export interface IComponentOptions {
+
+    info: C.IComponentOptions;
+
+    depends: IComponentDepend[];
+}
+
 export interface IComponent {
 
-    options: C.IComponentOptions<any>;
+    options: IComponentOptions;
 
     ctor: new (...args: any[]) => any;
 }

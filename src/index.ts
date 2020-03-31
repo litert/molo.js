@@ -15,7 +15,7 @@
  */
 
 export * from './Common';
-export * from './Hub';
+export * from './Container';
 export * from './SimpleScanner';
 
 import { createModule } from './Module';

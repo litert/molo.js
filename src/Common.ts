@@ -37,32 +37,32 @@ export interface ICreateObjectOptions {
      * An named object's lifetime is the whole build time. But if an object's name starts with `@@`,
      * it will become a global object and persistent.
      */
-    name?: string;
+    name: string;
 
     /**
-     * Filter the component with type, only works when this requires a bulk result.
+     * Filter the component with interface, only works when this requires a bulk result.
      */
-    types?: string[];
+    interface: string[];
 
     /**
      * The preferred provider to be used.
      */
-    provider?: string;
+    provider: string;
 
-    parameters?: Record<string, any>;
+    parameters: Record<string, any>;
 
     /**
      * The initial objects pool.
      */
-    objects?: Record<string, any>;
+    objects: Record<string, any>;
 
     /**
      * Mark as an optional dependency.
      */
-    optional?: boolean;
+    optional: boolean;
 }
 
-export interface IComponentOptions<T> {
+export interface IComponentOptions {
 
     /**
      * The name of component.
@@ -90,8 +90,6 @@ export interface IComponentOptions<T> {
 
     deprecated: string;
 
-    depends: Record<keyof T, string | ICreateObjectOptions>;
-
     imports: string[];
 }
 
@@ -109,7 +107,9 @@ export interface IRunOptions {
     args: string[];
 }
 
-export interface IHub {
+export type TCreateInputType<T, K extends keyof T> = Required<Pick<T, K>> & Partial<Pick<T, Exclude<keyof T, K>>>;
+
+export interface IContainer {
 
     addNamespace(namespace: string): this;
 
@@ -119,21 +119,25 @@ export interface IHub {
 
     run(opts: IRunOptions): Promise<void>;
 
-    getObject(opts: ICreateObjectOptions): Promise<any>;
+    getObject(opts: TCreateInputType<ICreateObjectOptions, 'target'> | string): Promise<any>;
 
     import(name: string): this;
 }
 
+export type TMixDecorator = (target: any, propertyKey: string | symbol, index?: any) => void;
+
 export interface IModule {
 
-    Component<T = any>(opts?: Partial<IComponentOptions<T>>): ClassDecorator;
+    Component(opts?: Partial<IComponentOptions>): ClassDecorator;
+
+    Inject(opts: TCreateInputType<ICreateObjectOptions, 'target'> | string): TMixDecorator;
 }
 
 export interface IProvideResult<T> {
 
     object: T;
 
-    singleton?: IComponentOptions<any>['singleton'];
+    singleton?: IComponentOptions['singleton'];
 }
 
 export interface IProvideOptions<A> {

@@ -108,3 +108,17 @@ export const E_NOT_MOLO_MODULE = ErrorHub.define(
     'The determined module doesn\'t supports Molo.',
     {}
 );
+
+export const E_UNKNOWN_INJECTION_POSITION = ErrorHub.define(
+    null,
+    'E_UNKNOWN_INJECTION_POSITION',
+    'The injection position is not supported yet.',
+    {}
+);
+
+export const E_DUP_INJECTION_POSITION = ErrorHub.define(
+    null,
+    'E_DUP_INJECTION_POSITION',
+    'There is already an injection definition in the position.',
+    {}
+);
