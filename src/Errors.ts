@@ -25,6 +25,13 @@ export const E_COMPONENT_DEPRECATED = ErrorHub.define(
     {}
 );
 
+export const E_MULTI_COMPONENTS = ErrorHub.define(
+    null,
+    'E_MULTI_COMPONENTS',
+    'Can not define two or more components in one file.',
+    {}
+);
+
 export const E_OBJECT_NOT_DECLARATION = ErrorHub.define(
     null,
     'E_OBJECT_NOT_DECLARATION',
@@ -120,5 +127,12 @@ export const E_DUP_INJECTION_POSITION = ErrorHub.define(
     null,
     'E_DUP_INJECTION_POSITION',
     'There is already an injection definition in the position.',
+    {}
+);
+
+export const E_NAME_CONFLICTED = ErrorHub.define(
+    null,
+    'E_NAME_CONFLICTED',
+    'There is a component with a same name of a namespace under the same namespace.',
     {}
 );

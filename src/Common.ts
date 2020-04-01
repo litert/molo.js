@@ -65,11 +65,6 @@ export interface ICreateObjectOptions {
 export interface IComponentOptions {
 
     /**
-     * The name of component.
-     */
-    name: string;
-
-    /**
      * The type of component.
      *
      * **Only used for filter.**

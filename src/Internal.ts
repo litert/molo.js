@@ -47,5 +47,5 @@ export interface IComponent {
 
 export interface IModule extends C.IModule {
 
-    getComponents(): IComponent[];
+    getComponent(): IComponent;
 }

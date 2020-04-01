@@ -1,5 +1,12 @@
 # Changes Logs
 
+## v0.2.0
+
+- Added injection on constructor params, setters and properties.
+- Removed package injection.
+- Disable multi-components in a same file.
+- Disable same name component and namespace under a same namespace.
+
 ## v0.1.6
 
 - Fixed context singleton for provided result.

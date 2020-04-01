@@ -20,7 +20,7 @@ import * as E from './Errors';
 
 class MoloModule implements I.IModule {
 
-    private _components!: Map<any, I.IComponent>;
+    private _component!: I.IComponent;
 
     private _filePath: string;
 
@@ -28,19 +28,18 @@ class MoloModule implements I.IModule {
 
         module.exports.__molo = this;
         this._filePath = module.filename;
-        this._components = new Map();
     }
 
-    public getComponents(): I.IComponent[] {
+    public getComponent(): I.IComponent {
 
-        return Array.from(this._components.values());
+        return this._component;
     }
 
     private _prepare(target: any): I.IComponent {
 
-        if (!this._components.has(target)) {
+        if (!this._component) {
 
-            const ret: I.IComponent = {
+            this._component = {
                 'options': {
                     'depends': [],
                     'info': null as any
@@ -48,21 +47,27 @@ class MoloModule implements I.IModule {
                 'ctor': target
             };
 
-            this._components.set(target, ret);
-
-            return ret;
+            return this._component;
         }
 
-        return this._components.get(target) as I.IComponent;
+        return this._component;
     }
 
     public Component(opts: Partial<C.IComponentOptions> = {}): ClassDecorator {
 
         return <T extends Function>(target: T): void | T => {
 
-            this._prepare(target).options.info = {
+            const com = this._prepare(target);
 
-                'name': opts.name ?? '',
+            if (com.options.info) {
+
+                throw new E.E_MULTI_COMPONENTS({ metadata: {
+                    file: this._filePath
+                } });
+            }
+
+            com.options.info = {
+
                 'imports': opts.imports ?? [],
                 'singleton': opts.singleton ?? false,
                 'type': opts.type ?? [],

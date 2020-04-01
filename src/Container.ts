@@ -208,6 +208,14 @@ class MoloContainer implements C.IContainer {
 
             if (root.namespaces[x]) {
 
+                if (root.components[x]) {
+
+                    throw new E.E_NAME_CONFLICTED({ metadata: {
+                        'namespace': root.fullName,
+                        'name': x
+                    } });
+                }
+
                 root = root.namespaces[x];
             }
             else {
@@ -261,72 +269,52 @@ class MoloContainer implements C.IContainer {
 
         this._validateDotPath(dotPath);
 
-        let coms = molo.getComponents();
+        const coms = molo.getComponent();
 
-        if (!coms.length) {
+        if (!coms) {
 
             return;
         }
 
         let ns: INamespace;
 
-        if (coms.length === 1) {
+        if (!coms.options.info) {
 
-            const item = coms.values().next().value;
+            return;
+        }
 
-            if (!item.options.info) {
+        const lastDotPos = dotPath.lastIndexOf('.');
 
-                return;
-            }
+        const relNSDotPath = dotPath.slice(namespace.fullName.length + 1, lastDotPos);
 
-            const lastDotPos = dotPath.lastIndexOf('.');
+        if (relNSDotPath) {
 
-            const relNSDotPath = dotPath.slice(namespace.fullName.length + 1, lastDotPos);
-
-            if (relNSDotPath) {
-
-                ns = this._addNamespace(relNSDotPath, namespace);
-            }
-            else {
-
-                ns = namespace;
-            }
-
-            if (!item.options.info.name) {
-
-                item.options.info.name = dotPath.slice(lastDotPos + 1);
-            }
-
-            this._registerComponent(item, ns, dotPath);
+            ns = this._addNamespace(relNSDotPath, namespace);
         }
         else {
 
-            ns = this._addNamespace(dotPath.slice(namespace.fullName.length + 1), namespace);
-
-            for (const item of coms.values()) {
-
-                if (!item.options.info) {
-
-                    return;
-                }
-
-                if (!item.options.info.name) {
-
-                    item.options.info.name = item.ctor.name;
-                }
-
-                this._registerComponent(item, ns, `${dotPath}.${item.options.info.name}`);
-            }
+            ns = namespace;
         }
+
+        this._registerComponent(coms, dotPath.slice(lastDotPos + 1), ns, dotPath);
     }
 
     private _registerComponent(
         coms: I.IComponent,
+        comName: string,
         ns: INamespace,
         dotPath: string,
     ): void {
 
-        ns.components[coms.options.info.name] = coms;
+        if (ns.namespaces[comName]) {
+
+            throw new E.E_NAME_CONFLICTED({ metadata: {
+                'namespace': ns.fullName,
+                'name': comName
+            } });
+        }
+
+        ns.components[comName] = coms;
 
         if (coms.options.info.provides) {
 
