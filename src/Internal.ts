@@ -33,9 +33,19 @@ export type IComponentDepend = C.TCreateInputType<ICreateObjectOptions, 'target'
 
 export interface IComponentOptions {
 
-    info: C.IComponentOptions;
+    interfaces: string[];
 
     depends: IComponentDepend[];
+
+    singleton: boolean | 'context';
+
+    entry: boolean;
+
+    deprecated: string;
+
+    imports: string[];
+
+    provides: Record<string, string>;
 }
 
 export interface IComponent {
@@ -45,7 +55,7 @@ export interface IComponent {
     ctor: new (...args: any[]) => any;
 }
 
-export interface IModule extends C.IModule {
+export interface IModule extends C.IComponent {
 
     getComponent(): IComponent;
 }

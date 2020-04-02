@@ -18,7 +18,7 @@ import * as C from './Common';
 import * as I from './Internal';
 import * as E from './Errors';
 
-class MoloModule implements I.IModule {
+class MoloComponent implements I.IModule {
 
     private _component!: I.IComponent;
 
@@ -41,8 +41,13 @@ class MoloModule implements I.IModule {
 
             this._component = {
                 'options': {
-                    'depends': [],
-                    'info': null as any
+                    'imports': [],
+                    'singleton': false,
+                    'interfaces': [],
+                    'deprecated': '',
+                    'entry': false,
+                    'provides': {},
+                    'depends': []
                 },
                 'ctor': target
             };
@@ -53,30 +58,93 @@ class MoloModule implements I.IModule {
         return this._component;
     }
 
-    public Component(opts: Partial<C.IComponentOptions> = {}): ClassDecorator {
+    public Component(): ClassDecorator {
 
         return <T extends Function>(target: T): void | T => {
 
-            const com = this._prepare(target);
+            if (this._component && this._component.ctor !== target as any) {
 
-            if (com.options.info) {
-
-                throw new E.E_MULTI_COMPONENTS({ metadata: {
-                    file: this._filePath
-                } });
+                throw new E.E_MULTI_COMPONENTS();
             }
 
-            com.options.info = {
-
-                'imports': opts.imports ?? [],
-                'singleton': opts.singleton ?? false,
-                'type': opts.type ?? [],
-                'deprecated': opts.deprecated ?? '',
-                'bootable': !!opts.bootable,
-                'provides': opts.provides ?? ''
-            };
+            this._prepare(target);
 
             return target;
+        };
+    }
+
+    public Entry(): ClassDecorator {
+
+        return <T extends Function>(target: T): void | T => {
+
+            this._prepare(target).options.entry = true;
+
+            return target;
+        };
+    }
+
+    public Deprecated(msg: string = ''): ClassDecorator {
+
+        return <T extends Function>(target: T): void | T => {
+
+            this._prepare(target).options.deprecated = msg;
+
+            return target;
+        };
+    }
+
+    public Singleton(singleton: boolean | 'context' = true): ClassDecorator {
+
+        return <T extends Function>(target: T): void | T => {
+
+            this._prepare(target).options.singleton = singleton;
+
+            return target;
+        };
+    }
+
+    public Interface(name: string): ClassDecorator {
+
+        return <T extends Function>(target: T): void | T => {
+
+            const interfaces = this._prepare(target).options.interfaces;
+
+            if (!interfaces.includes(name)) {
+
+                interfaces.push(name);
+            }
+
+            return target;
+        };
+    }
+
+    public Import(thirdModule: string): ClassDecorator {
+
+        return <T extends Function>(target: T): void | T => {
+
+            const imports = this._prepare(target).options.imports;
+
+            if (!imports.includes(thirdModule)) {
+
+                imports.push(thirdModule);
+            }
+
+            return target;
+        };
+    }
+
+    public Provides(interfaceName: string): MethodDecorator {
+
+        return <T>(target: any, propertyKey: string | symbol, descriptor: any): any => {
+
+            if (target.constructor && target.constructor.prototype === target) {
+
+                target = target.constructor;
+            }
+
+            this._prepare(target).options.provides[propertyKey as string] = interfaceName;
+
+            return descriptor;
         };
     }
 
@@ -203,7 +271,7 @@ class MoloModule implements I.IModule {
     }
 }
 
-export function createModule(module: NodeJS.Module): C.IModule {
+export function createComponent(module: NodeJS.Module): C.IComponent {
 
-    return new MoloModule(module);
+    return new MoloComponent(module);
 }

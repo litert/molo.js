@@ -62,32 +62,6 @@ export interface ICreateObjectOptions {
     optional: boolean;
 }
 
-export interface IComponentOptions {
-
-    /**
-     * The type of component.
-     *
-     * **Only used for filter.**
-     */
-    type: string[];
-
-    /**
-     * Mark this as a singleton.
-     */
-    singleton: boolean | 'context';
-
-    /**
-     * Specify the target this provider could provides, and mark this component as a provider.
-     */
-    provides: string;
-
-    bootable: boolean;
-
-    deprecated: string;
-
-    imports: string[];
-}
-
 export interface IScanner {
 
     getAbsolutePath(path: string): string;
@@ -97,9 +71,9 @@ export interface IScanner {
 
 export interface IRunOptions {
 
-    entry: string;
+    entry?: string;
 
-    args: string[];
+    args?: string[];
 }
 
 export type TCreateInputType<T, K extends keyof T> = Required<Pick<T, K>> & Partial<Pick<T, Exclude<keyof T, K>>>;
@@ -112,7 +86,7 @@ export interface IContainer {
 
     load(options: ILoadOptions): this;
 
-    run(opts: IRunOptions): Promise<void>;
+    run(opts?: IRunOptions): Promise<void>;
 
     getObject(opts: TCreateInputType<ICreateObjectOptions, 'target'> | string): Promise<any>;
 
@@ -121,10 +95,90 @@ export interface IContainer {
 
 export type TMixDecorator = (target: any, propertyKey: string | symbol, index?: any) => void;
 
-export interface IModule {
+export interface IComponent {
 
-    Component(opts?: Partial<IComponentOptions>): ClassDecorator;
+    /**
+     * Mark a class as a component.
+     *
+     * > Duplicated calls for a same class will be ignored.
+     *
+     * @decorator
+     */
+    Component(): ClassDecorator;
 
+    /**
+     * Mark a class as a singleton.
+     *
+     * > Duplicated calls for a same class, the previous setting will be overwritten.
+     *
+     * @decorator
+     *
+     * @param singleton The singleton status.
+     */
+    Singleton(singleton?: boolean | 'context'): ClassDecorator;
+
+    /**
+     * Bind a class with an interface.
+     *
+     * > Duplicated calls for a same class, the previous setting will be overwritten.
+     *
+     * @decorator
+     *
+     * @param name The name of interface that this class implemented
+     */
+    Interface(name: string): ClassDecorator;
+
+    /**
+     * Mark a class as an entry component.
+     *
+     * > Duplicated calls for a same class will be ignored.
+     *
+     * @decorator
+     */
+    Entry(): ClassDecorator;
+
+    /**
+     * Mark a class as deprecated.
+     *
+     * > Duplicated calls for a same class, the previous setting will be overwritten.
+     *
+     * @decorator
+     *
+     * @param msg The message shown for tips.
+     */
+    Deprecated(msg?: string): ClassDecorator;
+
+    /**
+     * Declare a third module as a dependency.
+     *
+     * > Duplicated calls is allowed for a same class.
+     *
+     * @decorator
+     *
+     * @param singleton The name of depended third module.
+     */
+    Import(mod: string): ClassDecorator;
+
+    /**
+     * Declare a method as a component provider.
+     *
+     * > Duplicated calls is allowed for a same method.
+     *
+     * @decorator
+     *
+     * @param target The target that the provider could provides.
+     */
+    Provides(target: string): MethodDecorator;
+
+    /**
+     * Declare an injection for constructor parameters, setter methods, properties.
+     *
+     * > Duplicated calls for a same injection position will be ignored.
+     *
+     * @decorator
+     *
+     * @param opts The options of injection.
+     */
     Inject(opts: TCreateInputType<ICreateObjectOptions, 'target'> | string): TMixDecorator;
 }
 
@@ -132,7 +186,7 @@ export interface IProvideResult<T> {
 
     object: T;
 
-    singleton?: IComponentOptions['singleton'];
+    singleton?: boolean | 'context';
 }
 
 export interface IProvideOptions<A> {
@@ -142,12 +196,7 @@ export interface IProvideOptions<A> {
     target: string;
 }
 
-export interface IProvider<T, A> {
-
-    provide(opts: IProvideOptions<A>): Promise<IProvideResult<T>> | IProvideResult<T>;
-}
-
-export interface IBootable {
+export interface IEntry {
 
     main(args: string[]): Promise<void>;
 }

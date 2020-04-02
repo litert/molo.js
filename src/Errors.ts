@@ -81,17 +81,24 @@ export const E_COMPONENT_NOT_FOUND = ErrorHub.define(
     {}
 );
 
-export const E_COMPONENT_NOT_BOOTABLE = ErrorHub.define(
+export const E_SEVERAL_ENTRIES_DEFINIED = ErrorHub.define(
     null,
-    'E_COMPONENT_NOT_BOOTABLE',
-    'The determined component is not runnable.',
+    'E_SEVERAL_ENTRIES_DEFINIED',
+    'There are several entry components, a determined one must be specified.',
     {}
 );
 
-export const E_COMPONENT_NOT_PROVIDABLE = ErrorHub.define(
+export const E_NO_ENTRIES_DEFINIED = ErrorHub.define(
     null,
-    'E_COMPONENT_NOT_PROVIDABLE',
-    'The component is not a provider.',
+    'E_NO_ENTRIES_DEFINIED',
+    'There are no entry components.',
+    {}
+);
+
+export const E_NOT_ENTRY_COMPONENT = ErrorHub.define(
+    null,
+    'E_NOT_ENTRY_COMPONENT',
+    'The determined component is not a program entry.',
     {}
 );
 

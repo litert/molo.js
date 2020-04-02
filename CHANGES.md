@@ -6,6 +6,11 @@
 - Removed package injection.
 - Disable multi-components in a same file.
 - Disable same name component and namespace under a same namespace.
+- Now entry and arguments could be omitted.
+- Allowed provider decorator in each method, instead of class level provider.
+- Splited component decorator into several decorators.
+- Renamed `types` into `interfaces`.
+- Renamed `bootable` into `entry`.
 
 ## v0.1.6
 

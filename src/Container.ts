@@ -45,6 +45,13 @@ interface INamespace {
     components: Record<string, I.IComponent>;
 }
 
+interface IProvider {
+
+    component: string;
+
+    method: string;
+}
+
 class MoloContainer implements C.IContainer {
 
     private _ns: INamespace = { fullName: '', namespaces: {}, components: {} };
@@ -55,11 +62,13 @@ class MoloContainer implements C.IContainer {
 
     private _namedObjectConfigs: Record<string, I.IComponentDepend> = {};
 
-    private _providers: Record<string, string[]> = {};
+    private _providers: Record<string, IProvider[]> = {};
 
-    private _wilecardProviders: Array<[RegExp, string]> = [];
+    private _wilecardProviders: Array<[RegExp, IProvider]> = [];
 
     private _imported: string[] = [];
+
+    private _entries: string[] = [];
 
     public constructor() {
 
@@ -278,7 +287,7 @@ class MoloContainer implements C.IContainer {
 
         let ns: INamespace;
 
-        if (!coms.options.info) {
+        if (!coms.options || !coms.ctor) {
 
             return;
         }
@@ -316,25 +325,36 @@ class MoloContainer implements C.IContainer {
 
         ns.components[comName] = coms;
 
-        if (coms.options.info.provides) {
+        if (Object.keys(coms.options.provides)) {
 
-            this._validateProvidePath(coms.options.info.provides);
+            for (const method in coms.options.provides) {
 
-            if (coms.options.info.provides.endsWith('.*')) {
+                const targetInterface = coms.options.provides[method];
 
-                this._wilecardProviders.push([
-                    new RegExp(`^${coms.options.info.provides.replace(/\./g, '\\.').slice(0, -1)}`),
-                    dotPath
-                ]);
-            }
-            else {
+                this._validateProvidePath(targetInterface);
 
-                if (!this._providers[coms.options.info.provides]) {
+                if (targetInterface.endsWith('.*')) {
 
-                    this._providers[coms.options.info.provides] = [];
+                    this._wilecardProviders.push([
+                        new RegExp(`^${targetInterface.replace(/\./g, '\\.').slice(0, -1)}`),
+                        {
+                            component: dotPath,
+                            method
+                        }
+                    ]);
                 }
+                else {
 
-                this._providers[coms.options.info.provides].push(dotPath);
+                    if (!this._providers[targetInterface]) {
+
+                        this._providers[targetInterface] = [];
+                    }
+
+                    this._providers[targetInterface].push({
+                        component: dotPath,
+                        method
+                    });
+                }
             }
         }
 
@@ -365,19 +385,45 @@ class MoloContainer implements C.IContainer {
             }
         }
 
-        for (const mName of coms.options.info.imports) {
+        for (const mName of coms.options.imports) {
 
             this.import(mName);
         }
+
+        if (coms.options.entry) {
+
+            this._entries.push(dotPath);
+        }
     }
 
-    public async run(opts: C.IRunOptions): Promise<void> {
+    public async run(opts: C.IRunOptions = {}): Promise<void> {
+
+        if (!this._entries.length) {
+
+            throw new E.E_NO_ENTRIES_DEFINIED();
+        }
+
+        if (!opts.entry) {
+
+            if (this._entries.length > 1) {
+
+                throw new E.E_SEVERAL_ENTRIES_DEFINIED();
+            }
+
+            opts.entry = this._entries[0];
+        }
+        else if (!this._entries.includes(opts.entry)) {
+
+            throw new E.E_NOT_ENTRY_COMPONENT({
+                metadata: { entry: opts.entry }
+            });
+        }
 
         let entryCom = this._getComponent(opts.entry);
 
-        if (!entryCom.options.info.bootable) {
+        if (!entryCom.options.entry) {
 
-            throw new E.E_COMPONENT_NOT_BOOTABLE({ metadata: { entry: opts.entry } });
+            throw new E.E_NOT_ENTRY_COMPONENT({ metadata: { entry: opts.entry } });
         }
 
         let entryObj = await this._getObject({
@@ -394,10 +440,10 @@ class MoloContainer implements C.IContainer {
 
         if (entryObj.main === undefined) {
 
-            throw new E.E_COMPONENT_NOT_BOOTABLE({ metadata: { entry: opts.entry } });
+            throw new E.E_NOT_ENTRY_COMPONENT({ metadata: { entry: opts.entry } });
         }
 
-        return entryObj.main(opts.args);
+        return entryObj.main(opts?.args ?? []);
     }
 
     public async getObject(opts: C.TCreateInputType<C.ICreateObjectOptions, 'target'>): Promise<any> {
@@ -443,7 +489,12 @@ class MoloContainer implements C.IContainer {
             return this._getComponentConstructor(ctx);
         }
 
-        let provider = ctx.provider;
+        let provider!: IProvider;
+
+        if (ctx.provider) {
+
+            provider = this._providers[ctx.target]?.find((v) => v.component === ctx.provider)!;
+        }
 
         if (!provider) {
 
@@ -514,7 +565,7 @@ class MoloContainer implements C.IContainer {
 
             const fullName = `${ns.fullName}.${x}`;
 
-            if (filter && !ns.components[x].options.info.type.some((v) => filter[v])) {
+            if (filter && !ns.components[x].options.interfaces.some((v) => filter[v])) {
 
                 continue;
             }
@@ -554,7 +605,7 @@ class MoloContainer implements C.IContainer {
 
             const fullName = `${ns.fullName}.${x}`;
 
-            if (filter && !ns.components[x].options.info.type.some((v) => filter[v])) {
+            if (filter && !ns.components[x].options.interfaces.some((v) => filter[v])) {
 
                 continue;
             }
@@ -602,7 +653,7 @@ class MoloContainer implements C.IContainer {
             }
         }
 
-        if (ctx.component.options.info.singleton) {
+        if (ctx.component.options.singleton) {
 
             if (ctx.objects[ctx.target]) {
 
@@ -615,11 +666,11 @@ class MoloContainer implements C.IContainer {
             }
         }
 
-        if (ctx.component.options.info.deprecated) {
+        if (ctx.component.options.deprecated) {
 
             E.ErrorHub.warn(new E.E_COMPONENT_DEPRECATED({
-                message: `Compoonent '${ctx.target}' has been deprecated: ${ctx.component.options.info.deprecated}.`,
-                metadata: { path: ctx.target, deprecated: ctx.component.options.info.deprecated }
+                message: `Compoonent '${ctx.target}' has been deprecated: ${ctx.component.options.deprecated}.`,
+                metadata: { path: ctx.target, deprecated: ctx.component.options.deprecated }
             }));
         }
 
@@ -671,11 +722,11 @@ class MoloContainer implements C.IContainer {
             ret[k](inject4Setters[k]);
         }
 
-        if (ctx.component.options.info.singleton === true) {
+        if (ctx.component.options.singleton === true) {
 
             this._singletons[ctx.target] = ret;
         }
-        else if (ctx.component.options.info.singleton === 'context') {
+        else if (ctx.component.options.singleton === 'context') {
 
             ctx.objects[ctx.target] = ret;
         }
@@ -683,11 +734,11 @@ class MoloContainer implements C.IContainer {
         return ret;
     }
 
-    private async _getObjectByProvider(provider: string, ctx: IConstructContext, wildcard?: boolean): Promise<any> {
+    private async _getObjectByProvider(provider: IProvider, ctx: IConstructContext, wildcard?: boolean): Promise<any> {
 
-        const providerComponent = this._getComponent(provider);
+        const providerComponent = this._getComponent(provider.component);
 
-        if (!wildcard && providerComponent.options.info.provides !== ctx.target) {
+        if (!wildcard && providerComponent.options.provides[provider.method] !== ctx.target) {
 
             throw new E.E_MISUSED_PROVIDER({
                 metadata: {
@@ -698,19 +749,19 @@ class MoloContainer implements C.IContainer {
             });
         }
 
-        const pdrObj: C.IProvider<any, any> = await this._getObject({
+        const pdrObj = await this._getObject({
             'component': null as any,
             'name': '',
             'objects': ctx.objects,
             'parameters': {},
             'provider': '',
             'stack': [...ctx.stack, ctx.target],
-            'target': provider,
+            'target': provider.component,
             'optional': false,
             'interface': [],
         });
 
-        let result = pdrObj.provide({
+        let result = pdrObj[provider.method]({
             parameters: ctx.parameters,
             target: ctx.target
         }) as C.IProvideResult<{}>;

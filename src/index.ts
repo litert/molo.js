@@ -18,8 +18,8 @@ export * from './Common';
 export * from './Container';
 export * from './SimpleScanner';
 
-import { createModule } from './Module';
+import { createComponent } from './Component';
 
-export default createModule;
+export default createComponent;
 
-export { createModule };
+export { createComponent };
