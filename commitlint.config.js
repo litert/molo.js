@@ -5,7 +5,7 @@ module.exports = {
         'type-enum': [2, 'always', [
             'feat',
             'fix',
-            'docs',
+            'add',
             'test',
             'refactor',
             'perf',
@@ -18,6 +18,7 @@ module.exports = {
             'decorator',
             'scanner',
             'lint',
+            'docs',
             'branch',
             'global'
         ]],

@@ -9,6 +9,7 @@
     "build-watch": "echo Using TypeScript && tsc -v && tsc -w -p .",
     "rebuild": "npm run clean && npm run lint && npm run build",
     "test": "echo See https://github.com/litert/molo-examples",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "clean": "rm -rf lib",
     "lint": "eslint --ext ts src"
   },
@@ -37,7 +38,7 @@
   "husky": {
     "hooks": {
       "commit-msg": "commitlint -E HUSKY_GIT_PARAMS",
-      "pre-commit": "npm run lint"
+      "pre-commit": "npm run lint && npm run typecheck"
     }
   },
   "devDependencies": {
