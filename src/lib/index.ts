@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-export * from './Common';
+export * from './Registry';
 export * from './Container';
-export * from './SimpleScanner';
+export * from './Common';
+export * from './Errors';
+export * from './ModuleScanner';
 
-import { createComponent } from './Component';
+import { getGlobalRegistry } from './Registry';
 
-export default createComponent;
-
-export { createComponent };
+export default getGlobalRegistry();

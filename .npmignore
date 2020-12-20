@@ -1,9 +1,10 @@
-/.vscode/
 /.git/
-/node_modules/
-/.gitignore
-/.npmignore
-/tsconfig.json
-/docs/
+/.vscode/
 /.eslintrc
-/examples/
+/.eslintignore
+/.npmrc
+/.npmignore
+/.gitignore
+/tsconfig.json
+/tslint.json
+/demo/

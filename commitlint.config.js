@@ -14,16 +14,17 @@ module.exports = {
             'merge'
         ]],
         'scope-enum': [2, 'always', [
-            'container',
+            'registry',
             'decorator',
-            'scanner',
+            'builder',
+            'rule',
+            'deps',
+            'doc',
             'lint',
-            'docs',
             'branch',
-            'global'
+            'project'
         ]],
         'scope-empty': [2, 'never'],
-        'subject-case': [2, 'always', 'lowerCase'],
         'subject-min-length': [2, 'always', 5],
         'subject-max-length': [2, 'always', 50],
     }
