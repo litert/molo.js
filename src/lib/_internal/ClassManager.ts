@@ -97,19 +97,14 @@ export class ClassManager implements I.IClassManager {
         );
     }
 
+    public findClassesByNamePattern(pattern: RegExp): I.IClassDescriptor[] {
+
+        return Object.values(this._classes).filter((v) => pattern.test(v.name));
+    }
+
     public findClassesByType(type: string): I.IClassDescriptor[] {
 
-        const ret: I.IClassDescriptor[] = [];
-
-        for (const n in this._classes) {
-
-            if (this._classes[n].types.includes(type)) {
-
-                ret.push(this._classes[n]);
-            }
-        }
-
-        return ret;
+        return Object.values(this._classes).filter((v) => v.types.includes(type));
     }
 
     public findFactoryMethodsByClass(clsName: string): I.IMethodDescriptor[] {

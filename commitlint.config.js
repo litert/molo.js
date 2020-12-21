@@ -17,6 +17,7 @@ module.exports = {
             'registry',
             'decorator',
             'builder',
+            'container',
             'rule',
             'deps',
             'doc',

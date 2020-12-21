@@ -56,7 +56,14 @@ class Registry implements C.IRegistry, I.IRegistry {
             this._.checkClassType(t);
         }
 
-        return Reflect.metadata(Symbols.K_TYPES, types.map((v) => v.slice(1)));
+        return function<TFunction extends Function>(target: TFunction): TFunction | void {
+
+            const m = Reflect.getMetadata(target, Symbols.K_TYPES) ?? [];
+
+            m.push(...types.map((v) => v.slice(1)));
+
+            Reflect.setMetadata(target, Symbols.K_TYPES, m);
+        };
     }
 
     public Inject(element: string): C.IInjectDecorator {

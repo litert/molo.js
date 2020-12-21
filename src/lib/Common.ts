@@ -31,12 +31,16 @@ export interface IRegistry {
     /**
      * Mark the requirement of an injection of determined dependency.
      *
+     * > NOTICE: When using multiple injection on a same method, only the last one will be applied.
+     *
      * @param element   The name of the depended element.
      */
     Inject(element: string): IInjectDecorator;
 
     /**
      * Specify the product of a factory method.
+     *
+     * > NOTICE: When using multiple provision on a same method, only the last one will be applied.
      *
      * @param element The product the factory method produces.
      */
@@ -56,6 +60,8 @@ export interface IRegistry {
 
     /**
      * Give an alter name of the class.
+     *
+     * > NOTICE: When using multiple name on a same class, only the last one will be applied.
      *
      * @param name  The alter name of the class.
      */
@@ -138,6 +144,20 @@ export interface IModuleScanner {
 export interface IContainer {
 
     /**
+     * Find registered classes by name pattern.
+     *
+     * @param pattern   The pattern of classes names to be found.
+     */
+    getClassesByPattern(pattern: RegExp): Record<string, IClassConstructor>;
+
+    /**
+     * Find registered classes by types.
+     *
+     * @param type   The name of types without prefix `~`.
+     */
+    getClassesByType(type: string[]): Record<string, IClassConstructor>;
+
+    /**
      * Create a custom scope.
      *
      * @param name          The name of the new scope.
@@ -158,10 +178,10 @@ export interface IContainer {
     getGlobalScope(): IScope;
 
     /**
-     * Get an object by name.
+     * Get an object by injection expression.
      *
-     * @param name      The name of object to be fetched.
+     * @param injection The injection expression of object to be fetched.
      * @param opts      The options of instantialization.
      */
-    get<T>(name: string, opts?: IInstantiationOptions): Promise<T>;
+    get<T>(injection: string, opts?: IInstantiationOptions): Promise<T>;
 }

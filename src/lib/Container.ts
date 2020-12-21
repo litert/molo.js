@@ -24,15 +24,18 @@ import { Builder } from './_internal/Builder';
 
 class Container implements C.IContainer {
 
-    private _scopes: Record<string, I.IScope> = {
+    private readonly _scopes: Record<string, I.IScope> = {
         [Symbols.K_GLOBAL_SCOPE]: new Scope('_global')
     };
 
-    private _builder: I.IBuilder;
+    private readonly _builder: I.IBuilder;
+
+    private readonly _classes: I.IClassManager;
 
     public constructor(registry: I.IRegistry) {
 
-        this._builder = new Builder(registry.getClassManager());
+        this._classes = registry.getClassManager();
+        this._builder = new Builder(this._classes);
     }
 
     public createScope(name: string, baseScope?: string): C.IScope {
@@ -48,6 +51,36 @@ class Container implements C.IContainer {
         }
 
         return this._scopes[name] = new Scope(name, baseScope ? this._scopes[baseScope] : undefined);
+    }
+
+    public getClassesByPattern(pattern: RegExp): Record<string, C.IClassConstructor> {
+
+        const ret: Record<string, C.IClassConstructor> = {};
+
+        for (const c of this._classes.findClassesByNamePattern(pattern)) {
+
+            ret[c.name] = c.ctor;
+        }
+
+        return ret;
+    }
+
+    public getClassesByType(types: string[]): Record<string, C.IClassConstructor> {
+
+        const clsList = Array.from(new Set(
+            types
+                .map((t) => this._classes.findClassesByType(t))
+                .reduce((p, q) => p.concat(q), [])
+        ));
+
+        const ret: Record<string, C.IClassConstructor> = {};
+
+        for (const c of clsList) {
+
+            ret[c.name] = c.ctor;
+        }
+
+        return ret;
     }
 
     public getScope(name?: string): C.IScope {
@@ -67,7 +100,7 @@ class Container implements C.IContainer {
         return this._scopes[Symbols.K_GLOBAL_SCOPE];
     }
 
-    public async get(name: string, opts?: C.IInstantiationOptions): Promise<any> {
+    public async get(injection: string, opts?: C.IInstantiationOptions): Promise<any> {
 
         if (!opts) {
 
@@ -76,7 +109,7 @@ class Container implements C.IContainer {
 
         const scope: I.IScope = opts.scope ?? this._scopes[Symbols.K_GLOBAL_SCOPE] as any;
 
-        let ret = this._builder.build(name, scope, opts.alias);
+        let ret = this._builder.build(injection, scope, opts.alias);
 
         if (ret instanceof Promise) {
 
@@ -87,7 +120,7 @@ class Container implements C.IContainer {
     }
 }
 
-export function createContainer(registry?: C.IRegistry): C.IContainer {
+export function createContainer(registry: C.IRegistry = getGlobalRegistry()): C.IContainer {
 
-    return new Container(registry ?? getGlobalRegistry() as any);
+    return new Container(registry as any);
 }

@@ -129,6 +129,13 @@ export interface IClassManager {
     findClassesByType(type: string): IClassDescriptor[];
 
     /**
+     * Find the classes that name matches the RegExp.
+     *
+     * @param pattern The pattern of name.
+     */
+    findClassesByNamePattern(pattern: RegExp): IClassDescriptor[];
+
+    /**
      * Find the factory methods that produces determined type.
      *
      * @param type The name of type, without prefix `~`
@@ -199,11 +206,11 @@ export interface IBuilder {
     /**
      * Build an object.
      *
-     * @param name      The name of new object.
-     * @param scope     The scope of the object.
-     * @param alias     The alias of the new object.
+     * @param injection     The injection expression of new object.
+     * @param scope         The scope of the object.
+     * @param alias         The alias of the new object.
      */
-    build(name: string, scope: IScope, alias?: string): any;
+    build(injection: string, scope: IScope, alias?: string): any;
 }
 
 export interface IInjectOptions {
