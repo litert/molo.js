@@ -24,9 +24,9 @@ import { Builder } from './_internal/Builder';
 
 class Container implements C.IContainer {
 
-    private readonly _scopes: Record<string, I.IScope> = {
-        [Symbols.K_GLOBAL_SCOPE]: new Scope('_global')
-    };
+    private readonly _scopes: Record<string, I.IScope>;
+
+    private _scopeSeq: I.IScope[];
 
     private readonly _builder: I.IBuilder;
 
@@ -34,6 +34,10 @@ class Container implements C.IContainer {
 
     public constructor(registry: I.IRegistry) {
 
+        this._scopes = {
+            [Symbols.K_GLOBAL_SCOPE]: new Scope('_global')
+        };
+        this._scopeSeq = [this._scopes[Symbols.K_GLOBAL_SCOPE]];
         this._classes = registry.getClassManager();
         this._builder = new Builder(this._classes);
     }
@@ -50,7 +54,11 @@ class Container implements C.IContainer {
             throw new E.E_SCOPE_NOT_FOUND({ name: baseScope });
         }
 
-        return this._scopes[name] = new Scope(name, baseScope ? this._scopes[baseScope] : undefined);
+        this._scopes[name] = new Scope(name, baseScope ? this._scopes[baseScope] : undefined);
+
+        this._scopeSeq.push(this._scopes[name]);
+
+        return this._scopes[name];
     }
 
     public getClassesByPattern(pattern: RegExp): Record<string, C.IClassConstructor> {
@@ -107,6 +115,11 @@ class Container implements C.IContainer {
             opts = {};
         }
 
+        if (typeof opts.scope === 'string') {
+
+            opts.scope = this._scopes[Symbols.K_GLOBAL_SCOPE] as any;
+        }
+
         const scope: I.IScope = opts.scope ?? this._scopes[Symbols.K_GLOBAL_SCOPE] as any;
 
         let ret = this._builder.build(injection, scope, opts.alias);
@@ -117,6 +130,21 @@ class Container implements C.IContainer {
         }
 
         return ret;
+    }
+
+    public async destroy(): Promise<void> {
+
+        while (1) {
+
+            const scope = this._scopeSeq.pop();
+
+            if (!scope) {
+
+                break;
+            }
+
+            await scope.release();
+        }
     }
 }
 

@@ -14,20 +14,39 @@
  * limitations under the License.
  */
 
-import Molo from '../lib';
+import Molo from '../../lib';
+import { IDBConn } from '../Components/DBConn';
 
 export interface IRoleDAO {
 
     getRoleById(id: number): string;
 }
 
+@Molo.Type(['~IRoleDAO'])
+@Molo.Private()
 class RoleDAO implements IRoleDAO {
 
-    public constructor(private _adminId: number) {}
+    public constructor(private _db: IDBConn, private _adminId: number) {}
 
     public getRoleById(id: number): string {
 
+        this._db.query(`SELECT * FROM roles WHERE id=${id};`);
+
         return id === this._adminId ? 'admin' : 'guest';
+    }
+
+    @Molo.Uninitializer()
+    public releaseData(): void {
+
+        console.log('RoleDAO: Uninitializing...');
+        return;
+    }
+
+    @Molo.Initializer()
+    public init(): void {
+
+        console.log('Initializeing RoleDAO...');
+        return;
     }
 }
 
@@ -35,16 +54,21 @@ class RoleDAO implements IRoleDAO {
 class RoleDAOFactory {
 
     @Molo.Provide('~IRoleDAO')
-    public createRoleDAO(@Molo.Inject('@admin_id') adminId: number): IRoleDAO {
+    public createRoleDAO(
+    /* eslint-disable @typescript-eslint/indent */
+        @Molo.Inject('~IDBConn@main')   db: IDBConn,
+        @Molo.Inject('@admin_id')       adminId: number
+    /* eslint-enable @typescript-eslint/indent */
+    ): IRoleDAO {
 
-        return new RoleDAO(adminId);
+        return new RoleDAO(db, adminId);
     }
 
     @Molo.Initializer()
     protected _init(): void {
 
-        console.log('initialized roles dao factory.');
+        console.log('Preparing RoleDAO factory...');
     }
 }
 
-Molo.use(RoleDAOFactory);
+Molo.use(RoleDAO, RoleDAOFactory);

@@ -32,6 +32,13 @@ export const E_CLASS_NOT_FOUND = exceptionRegistry.register({
     type: 'public'
 });
 
+export const E_PRIVATE_CLASS = exceptionRegistry.register({
+    name: 'private_class',
+    message: 'The determined class is private and unconstructable.',
+    metadata: {},
+    type: 'public'
+});
+
 export const E_MALFORMED_CLASS_NAME = exceptionRegistry.register({
     name: 'malformed_class_name',
     message: 'The name for class is malformed.',
@@ -88,6 +95,20 @@ export const E_DUP_INITIALIZER = exceptionRegistry.register({
     type: 'public'
 });
 
+export const E_DUP_UNINITIALIZER = exceptionRegistry.register({
+    name: 'dup_uninitializer',
+    message: 'There is already an uninitializer declared for the class.',
+    metadata: {},
+    type: 'public'
+});
+
+export const E_MALFORMED_UNINITIALIZER = exceptionRegistry.register({
+    name: 'malformed_uninitializer',
+    message: 'The uninitializer method can not have any parameters.',
+    metadata: {},
+    type: 'public'
+});
+
 export const E_LACK_PARAMS = exceptionRegistry.register({
     name: 'lack_params',
     message: 'The injection descriptors of method parameters is lacked.',
@@ -98,6 +119,13 @@ export const E_LACK_PARAMS = exceptionRegistry.register({
 export const E_FACTORY_NOT_FOUND = exceptionRegistry.register({
     name: 'factory_not_found',
     message: 'Can not find a way to create the object.',
+    metadata: {},
+    type: 'public'
+});
+
+export const E_INVALID_INJECTION = exceptionRegistry.register({
+    name: 'invalid_injection',
+    message: 'The injection here will not work.',
     metadata: {},
     type: 'public'
 });

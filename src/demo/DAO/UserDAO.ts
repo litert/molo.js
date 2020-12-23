@@ -14,11 +14,17 @@
  * limitations under the License.
  */
 
-import Molo from '../lib';
+import Molo from '../../lib';
+import { IDBConn } from '../Components/DBConn';
 
 class UserDAO {
 
+    @Molo.Inject('~IDBConn@main')
+    private _db!: IDBConn;
+
     public getUserList(): string[] {
+
+        this._db.query('SELECT * FROM users;');
 
         return ['Admin'];
     }

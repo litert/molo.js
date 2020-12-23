@@ -16,7 +16,7 @@
 
 /* eslint-disable @typescript-eslint/ban-types */
 /* eslint-disable @typescript-eslint/naming-convention */
-import Reflect from '@litert/reflect';
+import Reflect, { IReflectManager } from '@litert/reflect';
 import * as Symbols from './_internal/Symbols';
 import * as C from './Common';
 import * as E from './Errors';
@@ -28,16 +28,29 @@ class Registry implements C.IRegistry, I.IRegistry {
 
     private readonly _ = new Utils();
 
-    private _classMgr: I.IClassManager = new ClassManager();
+    private _classMgr: I.IClassManager;
+
+    public constructor(private readonly _ref: IReflectManager) {
+
+        this._classMgr = new ClassManager(this._ref);
+    }
 
     public getClassManager(): I.IClassManager {
 
         return this._classMgr;
     }
 
-    public use(theClass: C.IClassConstructor): this {
+    public getReflectObject(): IReflectManager {
 
-        this._classMgr.add(theClass);
+        return this._ref;
+    }
+
+    public use(...theClass: C.IClassConstructor[]): this {
+
+        for (const c of theClass) {
+
+            this._classMgr.add(c);
+        }
 
         return this;
     }
@@ -46,7 +59,7 @@ class Registry implements C.IRegistry, I.IRegistry {
 
         this._.checkClassName(name);
 
-        return Reflect.metadata(Symbols.K_NAME, name);
+        return this._ref.metadata(Symbols.K_NAME, name);
     }
 
     public Type(types: string[]): ClassDecorator {
@@ -56,13 +69,13 @@ class Registry implements C.IRegistry, I.IRegistry {
             this._.checkClassType(t);
         }
 
-        return function<TFunction extends Function>(target: TFunction): TFunction | void {
+        return <TFunction extends Function>(target: TFunction): TFunction | void => {
 
-            const m = Reflect.getMetadata(target, Symbols.K_TYPES) ?? [];
+            const m = this._ref.getMetadata(target, Symbols.K_TYPES) ?? [];
 
             m.push(...types.map((v) => v.slice(1)));
 
-            Reflect.setMetadata(target, Symbols.K_TYPES, m);
+            this._ref.setMetadata(target, Symbols.K_TYPES, m);
         };
     }
 
@@ -72,25 +85,25 @@ class Registry implements C.IRegistry, I.IRegistry {
 
         const inject: I.IInjectOptions = { injection: element };
 
-        return function(...args: any[]): void {
+        return (...args: any[]): void => {
 
-            if (Reflect.isForConstructorParameter(args)) {
+            if (this._ref.isForConstructorParameter(args)) {
 
-                Reflect.setMetadataOfConstructorParameter(args[0], args[2], Symbols.K_INJECT_NAME, inject);
+                this._ref.setMetadataOfConstructorParameter(args[0], args[2], Symbols.K_INJECT_NAME, inject);
             }
-            else if (Reflect.isForMethodParameter(args)) {
+            else if (this._ref.isForMethodParameter(args)) {
 
-                Reflect.setMetadataOfParameter(args[0], args[1], args[2], Symbols.K_INJECT_NAME, inject);
+                this._ref.setMetadataOfParameter(args[0], args[1], args[2], Symbols.K_INJECT_NAME, inject);
             }
-            else if (Reflect.isForProperty(args)) {
+            else if (this._ref.isForProperty(args)) {
 
-                Reflect.setMetadataOfProperty(args[0], args[1], Symbols.K_INJECT_NAME, inject);
+                this._ref.setMetadataOfProperty(args[0], args[1], Symbols.K_INJECT_NAME, inject);
             }
-            else if (Reflect.isForClass(args)) {
+            else if (this._ref.isForClass(args)) {
 
                 console.warn(`[WARNING] Incorrect injection "${element}" for "${args[0].constructor.name}".`);
             }
-            else if (Reflect.isForMethod(args)) {
+            else if (this._ref.isForMethod(args)) {
 
                 console.warn(`[WARNING] Incorrect injection "${element}" for "${args[0].constructor.name}.prototype.${args[1] as string}".`);
             }
@@ -99,12 +112,22 @@ class Registry implements C.IRegistry, I.IRegistry {
 
     public Singleton(): ClassDecorator {
 
-        return Reflect.metadata(Symbols.K_IS_SINGLETON, true);
+        return this._ref.metadata(Symbols.K_IS_SINGLETON, true);
+    }
+
+    public Private(): ClassDecorator {
+
+        return this._ref.metadata(Symbols.K_IS_PRIVATE, true);
     }
 
     public Initializer(): MethodDecorator {
 
-        return Reflect.metadata(Symbols.K_INITIALIZER, true);
+        return this._ref.metadata(Symbols.K_INITIALIZER, true);
+    }
+
+    public Uninitializer(): MethodDecorator {
+
+        return this._ref.metadata(Symbols.K_UNINITIALIZER, true);
     }
 
     public Provide(element: string): MethodDecorator {
@@ -114,17 +137,25 @@ class Registry implements C.IRegistry, I.IRegistry {
             throw new E.E_MALFORMED_PRODUCT({ 'product': element });
         }
 
-        return Reflect.metadata(Symbols.K_PRODUCT, element);
+        return this._ref.metadata(Symbols.K_PRODUCT, element);
     }
 }
 
-export function createRegistry(): C.IRegistry {
+/**
+ * Create a new Molo registry object.
+ *
+ * @param reflect   The reflect metadata object.
+ */
+export function createRegistry(reflect: IReflectManager = Reflect): C.IRegistry {
 
-    return new Registry();
+    return new Registry(reflect);
 }
 
 const globalRegistry = createRegistry();
 
+/**
+ * Get the default registry object of Molo.
+ */
 export function getGlobalRegistry(): C.IRegistry {
 
     return globalRegistry;

@@ -18,7 +18,11 @@ export const K_INJECT_NAME = Symbol('litert:molo:name');
 
 export const K_IS_SINGLETON = Symbol('litert:molo:singleton');
 
+export const K_IS_PRIVATE = Symbol('litert:molo:private');
+
 export const K_INITIALIZER = Symbol('litert:molo:initializer');
+
+export const K_UNINITIALIZER = Symbol('litert:molo:uninitializer');
 
 export const K_PRODUCT = Symbol('litert:molo:product');
 

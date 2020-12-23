@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import Molo from '../lib';
-import { IRoleDAO } from './RoleDAO';
+import Molo from '../../lib';
+import { IRoleDAO } from '../DAO/RoleDAO';
 
 export interface IUserDAO {
 
@@ -39,6 +39,12 @@ class UserManager {
         private _roleDAO: IRoleDAO,
     ) {}
 
+    @Molo.Initializer()
+    public loadData(): void {
+
+        console.log('UserManager: Loading data...');
+    }
+
     public getUserList(): string[] {
 
         return this._dao.getUserList();
@@ -47,6 +53,14 @@ class UserManager {
     public getRoleById(id: number): string {
 
         return this._roleDAO.getRoleById(id);
+    }
+
+    @Molo.Uninitializer()
+    public async uninit(): Promise<void> {
+
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        console.log('UserManager: bye bye');
     }
 }
 

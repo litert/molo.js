@@ -15,11 +15,14 @@
  */
 
 /* eslint-disable @typescript-eslint/unified-signatures */
+import { IReflectManager } from '@litert/reflect';
 import * as C from '../Common';
 
 export interface IRegistry {
 
     getClassManager(): IClassManager;
+
+    getReflectObject(): IReflectManager;
 }
 
 export interface IMethodDescriptor {
@@ -78,6 +81,11 @@ export interface IClassDescriptor {
     readonly isSingleton: boolean;
 
     /**
+     * Determined whether this class is unconstructable.
+     */
+    readonly isPrivate: boolean;
+
+    /**
      * The types of element for each parameter.
      */
     readonly parameters: readonly IInjectOptions[];
@@ -91,6 +99,11 @@ export interface IClassDescriptor {
      * The initializer function name of the class.
      */
     readonly initializer: string;
+
+    /**
+     * The uninitializer function name of the class.
+     */
+    readonly uninitializer: string;
 
     /**
      * Get the descriptor of determined method.
@@ -120,6 +133,8 @@ export interface IClassDescriptor {
 }
 
 export interface IClassManager {
+
+    findClassByObject<T extends Record<string, any>>(object: T): IClassDescriptor;
 
     /**
      * Find the classes belongs to determined type.
@@ -174,6 +189,10 @@ export interface IFactoryBind<TMode extends 'type' | 'alias'> extends IClassBind
 }
 
 export interface IScope extends C.IScope {
+
+    addUninitializer(obj: any, method: string): this;
+
+    release(): Promise<void>;
 
     findBindByAlias(alias: string): IClassBind<'alias', 'class'> | IFactoryBind<'alias'>;
 

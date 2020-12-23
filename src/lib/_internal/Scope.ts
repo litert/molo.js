@@ -37,7 +37,36 @@ export class Scope implements I.IScope {
         'type': {}
     };
 
+    private _uninit: Array<[any, string]> = [];
+
     public constructor(public readonly name: string, private _parent?: I.IScope) {}
+
+    public addUninitializer(obj: unknown, method: string): this {
+
+        this._uninit.push([obj, method]);
+
+        return this;
+    }
+
+    public async release(): Promise<void> {
+
+        while (1) {
+
+            const [obj, method] = this._uninit.pop() ?? [null, ''];
+
+            if (!obj) {
+
+                return;
+            }
+
+            const result = obj[method]();
+
+            if (result instanceof Promise) {
+
+                await result;
+            }
+        }
+    }
 
     public findBindByAlias(alias: string): I.IClassBind<'alias', any> {
 
@@ -49,44 +78,58 @@ export class Scope implements I.IScope {
         return this._binds.type[type];
     }
 
-    public bind(
+    public bindTypeWithFactory(
         type: string,
-        target: string,
-        className: string,
-        methodName?: string
-    ): void {
+        factory: string,
+        method: string
+    ): this {
 
-        switch (type) {
+        this._.checkClassType(type);
+        this._binds['type'][type.slice(1)] = {
+            'type': 'type-factory',
+            'className': factory,
+            'methodName': method
+        };
+        return this;
+    }
 
-            case 'alias-class':
-                this._binds['alias'][target] = {
-                    type,
-                    className
-                };
-                break;
-            case 'alias-factory':
-                this._binds['alias'][target] = {
-                    type,
-                    className,
-                    methodName
-                };
-                break;
-            case 'type-class':
-                this._.checkClassType(target);
-                this._binds['type'][target.slice(1)] = {
-                    type,
-                    className
-                };
-                break;
-            case 'type-factory':
-                this._.checkClassType(target);
-                this._binds['type'][target.slice(1)] = {
-                    type,
-                    className,
-                    methodName
-                };
-                break;
-        }
+    public bindTypeWithClass(
+        type: string,
+        className: string
+    ): this {
+
+        this._.checkClassType(type);
+        this._binds['type'][type.slice(1)] = {
+            'type': 'type-class',
+            'className': className
+        };
+        return this;
+    }
+
+    public bindAliasWithFactory(
+        alias: string,
+        factory: string,
+        method: string
+    ): this {
+
+        this._binds['alias'][alias] = {
+            'type': 'alias-factory',
+            'className': factory,
+            'methodName': method
+        };
+        return this;
+    }
+
+    public bindAliasWithClass(
+        alias: string,
+        className: string
+    ): this {
+
+        this._binds['alias'][alias] = {
+            'type': 'alias-class',
+            'className': className
+        };
+        return this;
     }
 
     public get(name: string): any {

@@ -71,7 +71,7 @@ export class Builder implements I.IBuilder {
                 }
             }
 
-            const classes = this._classes.findClassesByType(injection);
+            const classes = this._classes.findClassesByType(injection).filter((v) => !v.isPrivate);
 
             if (classes.length === 1) {
 
@@ -104,13 +104,13 @@ export class Builder implements I.IBuilder {
     }
 
     private async _buildByFactory(
-        cls: I.IClassDescriptor,
+        factoryCls: I.IClassDescriptor,
         method: I.IMethodDescriptor,
         scope: I.IScope,
         alias?: string
     ): Promise<any> {
 
-        const factoryObj = await this._buildByClass(cls, scope);
+        const factoryObj = await this.build(factoryCls.name, scope);
 
         const fnArgs: any[] = [];
 
@@ -126,6 +126,18 @@ export class Builder implements I.IBuilder {
             obj = await obj;
         }
 
+        const cls = this._classes.findClassByObject(obj);
+
+        if (cls?.initializer) {
+
+            await this._initObject(obj, scope, cls);
+        }
+
+        if (cls?.uninitializer) {
+
+            scope.addUninitializer(obj, cls.uninitializer);
+        }
+
         if (alias !== undefined) {
 
             scope.set(alias, obj);
@@ -139,6 +151,11 @@ export class Builder implements I.IBuilder {
         scope: I.IScope,
         alias?: string
     ): Promise<any> {
+
+        if (cls.isPrivate) {
+
+            throw new E.E_PRIVATE_CLASS({ name: cls.name, scope: scope.name, alias });
+        }
 
         if (cls.isSingleton) {
 
@@ -191,6 +208,11 @@ export class Builder implements I.IBuilder {
         if (cls.initializer) {
 
             await this._initObject(obj, scope, cls);
+        }
+
+        if (cls.uninitializer) {
+
+            scope.addUninitializer(obj, cls.uninitializer);
         }
 
         return obj;

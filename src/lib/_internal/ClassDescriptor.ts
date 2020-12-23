@@ -18,7 +18,7 @@ import * as I from '.';
 import * as C from '../Common';
 import * as E from '../Errors';
 import * as Symbols from './Symbols';
-import Reflect from '@litert/reflect';
+import { IReflectManager } from '@litert/reflect';
 import { MethodDescriptor } from './MethodDescriptor';
 
 export class ClassDescriptor implements I.IClassDescriptor {
@@ -29,20 +29,25 @@ export class ClassDescriptor implements I.IClassDescriptor {
 
     public readonly initializer: string;
 
+    public readonly uninitializer: string;
+
     public constructor(
         public readonly name: string,
         public readonly types: string[],
         public readonly ctor: C.IClassConstructor,
         public readonly isSingleton: boolean,
+        public readonly isPrivate: boolean,
         public readonly parameters: readonly I.IInjectOptions[],
-        public readonly properties: Record<string, I.IInjectOptions>
+        public readonly properties: Record<string, I.IInjectOptions>,
+        ref: IReflectManager
     ) {
 
         this.initializer = '';
+        this.uninitializer = '';
 
-        for (const methodName of Reflect.getOwnMethodNames(ctor)) {
+        for (const methodName of ref.getOwnMethodNames(ctor)) {
 
-            const product = Reflect.getMetadataOfMethod(ctor, methodName, Symbols.K_PRODUCT);
+            const product = ref.getMetadataOfMethod(ctor, methodName, Symbols.K_PRODUCT);
 
             let isMoloFn: boolean = false;
 
@@ -51,9 +56,7 @@ export class ClassDescriptor implements I.IClassDescriptor {
                 isMoloFn = true;
             }
 
-            const isInit = Reflect.getMetadataOfMethod(ctor, methodName, Symbols.K_INITIALIZER);
-
-            if (isInit) {
+            if (ref.getMetadataOfMethod(ctor, methodName, Symbols.K_INITIALIZER)) {
 
                 isMoloFn = true;
 
@@ -68,6 +71,27 @@ export class ClassDescriptor implements I.IClassDescriptor {
                 this.initializer = methodName as string;
             }
 
+            if (ref.getMetadataOfMethod(ctor, methodName, Symbols.K_UNINITIALIZER)) {
+
+                if (this.uninitializer) {
+
+                    throw new E.E_DUP_UNINITIALIZER({
+                        uninitializer1: this.uninitializer,
+                        uninitializer2: methodName
+                    });
+                }
+
+                if (ctor.prototype[methodName].length) {
+
+                    throw new E.E_MALFORMED_UNINITIALIZER({
+                        class: this.name,
+                        uninitializer: methodName
+                    });
+                }
+
+                this.uninitializer = methodName as string;
+            }
+
             if (!isMoloFn) {
 
                 continue;
@@ -79,7 +103,16 @@ export class ClassDescriptor implements I.IClassDescriptor {
 
             for (let i = 0; ; i++) {
 
-                const injectType = Reflect.getMetadataOfParameter(ctor, methodName, i, Symbols.K_INJECT_NAME);
+                const injectType = ref.getMetadataOfParameter(ctor, methodName, i, Symbols.K_INJECT_NAME);
+
+                if (this.uninitializer === methodName) {
+
+                    throw new E.E_INVALID_INJECTION({
+                        position: 'parameters',
+                        method: methodName,
+                        reason: 'No injection for uninitializer method.'
+                    });
+                }
 
                 if (!injectType) {
 

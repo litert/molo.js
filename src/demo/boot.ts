@@ -15,28 +15,38 @@
  */
 
 import * as $Molo from '../lib';
-import { IRoleDAO } from './RoleDAO';
-import { IUserManager } from './UserManager';
+import { IRoleDAO } from './DAO/RoleDAO';
+import { IUserManager } from './Services/UserManager';
 
 (async () => {
 
     try {
 
-        $Molo.createDefaultModuleScanner().scan([__dirname]);
+        $Molo.createDefaultModuleScanner().scan([
+            `${__dirname}/Components`,
+            `${__dirname}/DAO`,
+            `${__dirname}/Services`,
+        ]);
 
         const container = $Molo.createContainer();
 
         container.getScope().set('admin_id', 1);
+        container.getScope().set('dbconfig', 1);
+        container.getScope().bindTypeWithClass('~IDBConn', 'MySQLConn');
 
         const users = await container.get<IUserManager>('UserManager');
 
         console.log(users.getRoleById(123));
         console.log(users.getRoleById(1));
+        console.log(users.getUserList());
 
         console.log((await container.get<IRoleDAO>('~IRoleDAO@ccc')).getRoleById(444));
+
+        await container.destroy();
     }
     catch (e) {
 
         console.error(e);
     }
+
 })().catch(console.error);

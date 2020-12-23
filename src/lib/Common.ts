@@ -24,9 +24,14 @@ export type IInjectDecorator = (target: Object, propertyKey: string | symbol, in
 export interface IRegistry {
 
     /**
-     * Mark a method as the initializer of an object that call after build.
+     * Mark a method as the initializer of an object that will be called after built.
      */
     Initializer(): MethodDecorator;
+
+    /**
+     * Mark a method as the uninitializer of an object that will be called before destroying.
+     */
+    Uninitializer(): MethodDecorator;
 
     /**
      * Mark the requirement of an injection of determined dependency.
@@ -52,6 +57,11 @@ export interface IRegistry {
     Singleton(): ClassDecorator;
 
     /**
+     * Mark a class as unconstructable.
+     */
+    Private(): ClassDecorator;
+
+    /**
      * Mark the type(s) of the class.
      *
      * @param type  The type(s) of the class.
@@ -72,7 +82,7 @@ export interface IRegistry {
      *
      * @param theClass The class to be imported.
      */
-    use(theClass: IClassConstructor): this;
+    use(...theClass: IClassConstructor[]): this;
 }
 
 export interface IScope {
@@ -91,28 +101,52 @@ export interface IScope {
     set(alias: string, value: any): void;
 
     /**
-     * Bind an alias/type to a factory method.
+     * Bind a type to a factory method.
      *
-     * @param mode      The mode of bind.
-     * @param target    The alias or type.
+     * @param type      The type.
      * @param factory   The factory class name.
      * @param method    The factory method name.
      */
-    bind<T extends 'type' | 'alias'>(
-        mode: `${T}-factory`,
-        target: string,
+    bindTypeWithFactory(
+        type: string,
         factory: string,
         method: string
-    ): void;
+    ): this;
 
     /**
-     * Bind an alias/type to a class.
+     * Bind a type to a class.
      *
-     * @param mode      The mode of bind.
-     * @param target    The alias or type.
-     * @param className The class to bind.
+     * @param type      The type.
+     * @param className The class name.
      */
-    bind<T extends 'type' | 'alias'>(mode: `${T}-class`, target: string, className: string): void;
+    bindTypeWithClass(
+        type: string,
+        className: string
+    ): this;
+
+    /**
+     * Bind an alias to a factory method.
+     *
+     * @param alias     The type.
+     * @param factory   The factory class name.
+     * @param method    The factory method name.
+     */
+    bindAliasWithFactory(
+        alias: string,
+        factory: string,
+        method: string
+    ): this;
+
+    /**
+     * Bind an alias to a class.
+     *
+     * @param alias     The alias.
+     * @param className The class name.
+     */
+    bindAliasWithClass(
+        alias: string,
+        className: string
+    ): this;
 }
 
 export interface IInstantiationOptions {
@@ -120,7 +154,7 @@ export interface IInstantiationOptions {
     /**
      * The custom scope. [Default: the global scope]
      */
-    scope?: IScope;
+    scope?: IScope | string;
 
     alias?: string;
 }
@@ -142,6 +176,11 @@ export interface IModuleScanner {
 }
 
 export interface IContainer {
+
+    /**
+     * Release all objects insides container.
+     */
+    destroy(): Promise<void>;
 
     /**
      * Find registered classes by name pattern.

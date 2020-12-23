@@ -10,6 +10,8 @@
             "name": "[LiteRT/Molo] Demo",
             "program": "${workspaceFolder}/src/demo/boot.ts",
             "sourceMaps": true,
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
             "outFiles": [
                 "${workspaceFolder}/**/*.js"
             ]
