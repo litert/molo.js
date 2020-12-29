@@ -67,6 +67,13 @@ export const E_MALFORMED_CLASS_TYPE = exceptionRegistry.register({
     type: 'public'
 });
 
+export const E_MALFORMED_VAR_NAME = exceptionRegistry.register({
+    name: 'malformed_var_name',
+    message: 'The name for variable is malformed.',
+    metadata: {},
+    type: 'public'
+});
+
 export const E_METHOD_NOT_FOUND = exceptionRegistry.register({
     name: 'method_not_found',
     message: 'The determined method does not exist.',

@@ -60,7 +60,7 @@ export class ClassManager implements I.IClassManager {
 
     public add(theClass: C.IClassConstructor): void {
 
-        const name = this._ref.getMetadata(theClass, Symbols.K_NAME) ?? theClass.name;
+        const name = this._ref.getMetadata(theClass, Symbols.K_CLASS_NAME) ?? theClass.name;
 
         const params: I.IInjectOptions[] = [];
 
@@ -72,7 +72,7 @@ export class ClassManager implements I.IClassManager {
 
             for (let i = 0; ; i++) {
 
-                const p = this._ref.getMetadataOfConstructorParameter(theClass, i, Symbols.K_INJECT_NAME);
+                const p = this._ref.getMetadataOfConstructorParameter(theClass, i, Symbols.K_INJECTION);
 
                 if (!p) {
 
@@ -89,7 +89,7 @@ export class ClassManager implements I.IClassManager {
 
             for (const p of this._ref.getOwnPropertyNames(theClass)) {
 
-                const inject = this._ref.getMetadataOfProperty(theClass, p, Symbols.K_INJECT_NAME);
+                const inject = this._ref.getMetadataOfProperty(theClass, p, Symbols.K_INJECTION);
 
                 if (inject) {
 
@@ -117,9 +117,9 @@ export class ClassManager implements I.IClassManager {
         return Object.values(this._classes).filter((v) => pattern.test(v.name));
     }
 
-    public findClassByObject<T extends Record<string, any>>(object: T): I.IClassDescriptor {
+    public findClassByObject<T extends Record<string, any>>(object: T): I.IClassDescriptor | undefined {
 
-        return this._ctorMap.get(object.__proto__.constructor)!;
+        return this._ctorMap.get(object.__proto__.constructor);
     }
 
     public findClassesByType(type: string): I.IClassDescriptor[] {

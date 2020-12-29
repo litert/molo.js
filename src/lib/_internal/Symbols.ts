@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-export const K_INJECT_NAME = Symbol('litert:molo:name');
+export const K_INJECTION = Symbol('litert:molo:injection');
 
 export const K_IS_SINGLETON = Symbol('litert:molo:singleton');
 
@@ -26,8 +26,12 @@ export const K_UNINITIALIZER = Symbol('litert:molo:uninitializer');
 
 export const K_PRODUCT = Symbol('litert:molo:product');
 
-export const K_NAME = Symbol('litert:molo:name');
+export const K_CLASS_NAME = Symbol('litert:molo:class:name');
+
+export const K_CLASS_NAME_PREFIX = Symbol('litert:molo:class:name:prefix');
 
 export const K_TYPES = Symbol('litert:molo:types');
 
 export const K_GLOBAL_SCOPE = Symbol('litert:molo:scope:global') as any as string;
+
+export const K_INJECTION_EXPR = Symbol('litert:molo:injection:expr') as any as string;

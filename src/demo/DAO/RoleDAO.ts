@@ -57,7 +57,7 @@ class RoleDAOFactory {
     public createRoleDAO(
     /* eslint-disable @typescript-eslint/indent */
         @Molo.Inject('~IDBConn@main')   db: IDBConn,
-        @Molo.Inject('@admin_id')       adminId: number
+        @Molo.Inject('@adminId')       adminId: number
     /* eslint-enable @typescript-eslint/indent */
     ): IRoleDAO {
 

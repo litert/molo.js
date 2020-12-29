@@ -17,27 +17,19 @@
 import * as I from '.';
 import { Utils } from './Utils';
 
-type IBindMap = {
-    [K in 'alias' | 'type']: {
-
-        [k: string]: I.IClassBind<K, any> | I.IFactoryBind<K>;
-    };
-};
-
 export class Scope implements I.IScope {
 
     private readonly _ = new Utils();
 
-    private _content: Record<string, any> = {};
+    private _vars: Record<string, any> = {};
+
+    private _contexts: Record<string, Record<string, any>> = {};
 
     private _singletons: Record<string, any> = {};
 
-    private _binds: IBindMap = {
-        'alias': {},
-        'type': {}
-    };
-
     private _uninit: Array<[any, string]> = [];
+
+    private _solutions: Record<string, I.ITargetExpress> = {};
 
     public constructor(public readonly name: string, private _parent?: I.IScope) {}
 
@@ -48,7 +40,7 @@ export class Scope implements I.IScope {
         return this;
     }
 
-    public async release(): Promise<void> {
+    public async destroy(): Promise<void> {
 
         while (1) {
 
@@ -68,78 +60,50 @@ export class Scope implements I.IScope {
         }
     }
 
-    public findBindByAlias(alias: string): I.IClassBind<'alias', any> {
+    public getValue(name: string): any {
 
-        return this._binds.alias[alias];
+        return this._vars[name] ?? this._parent?.getValue(name);
     }
 
-    public findBindByType(type: string): I.IClassBind<'type', any> {
+    public bindValue(name: string, value: unknown): this {
 
-        return this._binds.type[type];
-    }
+        this._.checkVarName(name);
 
-    public bindTypeWithFactory(
-        type: string,
-        factory: string,
-        method: string
-    ): this {
+        this._vars[name] = value;
 
-        this._.checkClassType(type);
-        this._binds['type'][type.slice(1)] = {
-            'type': 'type-factory',
-            'className': factory,
-            'methodName': method
-        };
         return this;
     }
 
-    public bindTypeWithClass(
-        type: string,
-        className: string
-    ): this {
+    public bindContext(expr: string, ctx: Record<string, any>): this {
 
-        this._.checkClassType(type);
-        this._binds['type'][type.slice(1)] = {
-            'type': 'type-class',
-            'className': className
-        };
+        this._contexts[expr] = ctx;
+
         return this;
     }
 
-    public bindAliasWithFactory(
-        alias: string,
-        factory: string,
-        method: string
-    ): this {
+    public findExtraBindings(expr: string): Record<string, any> | undefined {
 
-        this._binds['alias'][alias] = {
-            'type': 'alias-factory',
-            'className': factory,
-            'methodName': method
-        };
+        return this._contexts[expr];
+    }
+
+    public bind(srcExpr: string, dstExpr: string, injects?: Record<string, any>): this {
+
+        this._.checkSourceExpression(srcExpr);
+        const dst = this._.parseTargetExpression(dstExpr);
+
+        this._solutions[srcExpr] = dst;
+
+        if (injects) {
+
+            this.bindContext(srcExpr, injects);
+        }
+
         return this;
     }
 
-    public bindAliasWithClass(
-        alias: string,
-        className: string
-    ): this {
+    public findBind(expr: string): I.ITargetExpress | undefined {
 
-        this._binds['alias'][alias] = {
-            'type': 'alias-class',
-            'className': className
-        };
-        return this;
-    }
-
-    public get(name: string): any {
-
-        return this._content[name] ?? this._parent?.get(name);
-    }
-
-    public set(name: string, value: unknown): void {
-
-        this._content[name] = value;
+        return this._solutions[expr];
     }
 
     public getSingleton(name: string): any {

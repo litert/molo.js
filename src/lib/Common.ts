@@ -21,6 +21,11 @@ export type IClassConstructor = new (...args: any[]) => any;
 
 export type IInjectDecorator = (target: Object, propertyKey: string | symbol, index?: any) => void;
 
+export interface IInjectOptions {
+
+    binds?: Record<string, any>;
+}
+
 export interface IRegistry {
 
     /**
@@ -38,9 +43,10 @@ export interface IRegistry {
      *
      * > NOTICE: When using multiple injection on a same method, only the last one will be applied.
      *
-     * @param element   The name of the depended element.
+     * @param expr   The expression of the depended element.
+     * @param opts   The extra options of injection.
      */
-    Inject(element: string): IInjectDecorator;
+    Inject(expr: string, opts?: IInjectOptions): IInjectDecorator;
 
     /**
      * Specify the product of a factory method.
@@ -73,9 +79,18 @@ export interface IRegistry {
      *
      * > NOTICE: When using multiple name on a same class, only the last one will be applied.
      *
-     * @param name  The alter name of the class.
+     * @param name      The alter name of the class.
      */
     Name(name: string): ClassDecorator;
+
+    /**
+     * Setup the prefix of class name.
+     *
+     * > NOTICE: When using multiple prefix on a same class, only the last one will be applied.
+     *
+     * @param prefix    The prefix of class alter name.
+     */
+    Prefix(prefix: string): ClassDecorator;
 
     /**
      * Import the class into global classes space.
@@ -93,60 +108,23 @@ export interface IScope {
     readonly name: string;
 
     /**
-     * Set the key-value pair data in the scope. And the data will be used as aliases.
+     * Bind a varaible with determined value.
      *
-     * @param alias     The name/alias of data.
-     * @param value     The content of data.
+     * @param varName   The name of variable.
+     * @param val       The value of varibale.
      */
-    set(alias: string, value: any): void;
+    bindValue(varName: string, val: any): this;
 
     /**
-     * Bind a type to a factory method.
+     * Bind an express with another express.
      *
-     * @param type      The type.
-     * @param factory   The factory class name.
-     * @param method    The factory method name.
+     * @param expr      The source express
+     * @param dest      The target express
+     * @param extBinds  The optional extra binds.
      */
-    bindTypeWithFactory(
-        type: string,
-        factory: string,
-        method: string
-    ): this;
+    bind(expr: string, dest: string, extBinds?: Record<string, any>): this;
 
-    /**
-     * Bind a type to a class.
-     *
-     * @param type      The type.
-     * @param className The class name.
-     */
-    bindTypeWithClass(
-        type: string,
-        className: string
-    ): this;
-
-    /**
-     * Bind an alias to a factory method.
-     *
-     * @param alias     The type.
-     * @param factory   The factory class name.
-     * @param method    The factory method name.
-     */
-    bindAliasWithFactory(
-        alias: string,
-        factory: string,
-        method: string
-    ): this;
-
-    /**
-     * Bind an alias to a class.
-     *
-     * @param alias     The alias.
-     * @param className The class name.
-     */
-    bindAliasWithClass(
-        alias: string,
-        className: string
-    ): this;
+    bindContext(expr: string, context: Record<string, any>): this;
 }
 
 export interface IInstantiationOptions {
@@ -154,9 +132,9 @@ export interface IInstantiationOptions {
     /**
      * The custom scope. [Default: the global scope]
      */
-    scope?: IScope | string;
+    scope?: IScope;
 
-    alias?: string;
+    binds?: Record<string, any>;
 }
 
 export interface IModuleScanner {
@@ -210,11 +188,6 @@ export interface IContainer {
      * @param name  The name of the existing scope.
      */
     getScope(name?: string): IScope;
-
-    /**
-     * Get the built-in global scope.
-     */
-    getGlobalScope(): IScope;
 
     /**
      * Get an object by injection expression.

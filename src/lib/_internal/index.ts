@@ -108,6 +108,8 @@ export interface IClassDescriptor {
     /**
      * Get the descriptor of determined method.
      *
+     * > **Throws an exception if determined method does not exist.**
+     *
      * @param name  The name of method.
      */
     getMethod(name: string): IMethodDescriptor;
@@ -134,7 +136,12 @@ export interface IClassDescriptor {
 
 export interface IClassManager {
 
-    findClassByObject<T extends Record<string, any>>(object: T): IClassDescriptor;
+    /**
+     * Find the descriptor of the class that a object belongs to.
+     *
+     * @param object    The object.
+     */
+    findClassByObject<T extends Record<string, any>>(object: T): IClassDescriptor | undefined;
 
     /**
      * Find the classes belongs to determined type.
@@ -164,6 +171,11 @@ export interface IClassManager {
      */
     findFactoryMethodsByClass(className: string): IMethodDescriptor[];
 
+    /**
+     * Register a class into this manager.
+     *
+     * @param theClass The ctor of the class.
+     */
     add(theClass: C.IClassConstructor): void;
 
     /**
@@ -171,39 +183,47 @@ export interface IClassManager {
      */
     has(name: string): boolean;
 
+    /**
+     * Get the descriptor of specific class by name.
+     *
+     * > **Throws an exception if determined method does not exist.**
+     *
+     * @param name  The name of class.
+     */
     get(name: string): IClassDescriptor;
 
+    /**
+     * Get name list of all classes registered in this manager.
+     */
     getNames(): string[];
-}
-
-export interface IClassBind<TMode extends 'type' | 'alias', TType extends 'class' | 'factory'> {
-
-    type: `${TMode}-${TType}`;
-
-    className: string;
-}
-
-export interface IFactoryBind<TMode extends 'type' | 'alias'> extends IClassBind<TMode, 'factory'> {
-
-    methodName: string;
 }
 
 export interface IScope extends C.IScope {
 
+    /**
+     * Find injection binding.
+     *
+     * @param expr  The required injection expression.
+     */
+    findBind(expr: string): ITargetExpress | undefined;
+
+    /**
+     * Find the extra injects bindings for specific injection.
+     *
+     * @param expr  The express to be searched.
+     */
+    findExtraBindings(expr: string): Record<string, any> | undefined;
+
     addUninitializer(obj: any, method: string): this;
 
-    release(): Promise<void>;
-
-    findBindByAlias(alias: string): IClassBind<'alias', 'class'> | IFactoryBind<'alias'>;
-
-    findBindByType(type: string): IClassBind<'type', 'class'> | IFactoryBind<'type'>;
+    destroy(): Promise<void>;
 
     /**
      * Get an object in the scope.
      *
      * @param name  The name of object.
      */
-    get(name: string): any;
+    getValue(name: string): any;
 
     /**
      * Get the singleton of determined class.
@@ -220,6 +240,49 @@ export interface IScope extends C.IScope {
     setSingleton(name: string, singleton: any): void;
 }
 
+export interface ISourceExpress {
+
+    /**
+     * The full express.
+     */
+    fullExpr: string;
+
+    /**
+     * The name of variable.
+     */
+    varName: string;
+
+    /**
+     * The express of variable.
+     */
+    varExpr: string;
+
+    /**
+     * The express of type.
+     */
+    typeExpr: string;
+
+    /**
+     * The name of type.
+     */
+
+    typeName: string;
+
+    /**
+     * Tell if it's an abstract type.
+     */
+    isAbstract: boolean;
+}
+
+export interface ITargetExpress extends ISourceExpress {
+
+    optional: boolean;
+
+    factoryMethod: string;
+
+    factoryExpr: string;
+}
+
 export interface IBuilder {
 
     /**
@@ -234,5 +297,10 @@ export interface IBuilder {
 
 export interface IInjectOptions {
 
-    injection: string;
+    /**
+     * The injection expression.
+     */
+    expr: string;
+
+    binds?: Record<string, any>;
 }

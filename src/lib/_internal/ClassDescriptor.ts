@@ -103,7 +103,7 @@ export class ClassDescriptor implements I.IClassDescriptor {
 
             for (let i = 0; ; i++) {
 
-                const injectType = ref.getMetadataOfParameter(ctor, methodName, i, Symbols.K_INJECT_NAME);
+                const injectType = ref.getMetadataOfParameter(ctor, methodName, i, Symbols.K_INJECTION);
 
                 if (this.uninitializer === methodName) {
 
@@ -122,7 +122,7 @@ export class ClassDescriptor implements I.IClassDescriptor {
                 params.push(injectType);
             }
 
-            if (params.length !== ctor.prototype[methodName].length) {
+            if (params.length < ctor.prototype[methodName].length) {
 
                 throw new E.E_LACK_PARAMS({ class: name, method: methodName });
             }

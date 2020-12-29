@@ -15,7 +15,6 @@
  */
 
 import * as $Molo from '../lib';
-import { IRoleDAO } from './DAO/RoleDAO';
 import { IUserManager } from './Services/UserManager';
 
 (async () => {
@@ -30,17 +29,27 @@ import { IUserManager } from './Services/UserManager';
 
         const container = $Molo.createContainer();
 
-        container.getScope().set('admin_id', 1);
-        container.getScope().set('dbconfig', 1);
-        container.getScope().bindTypeWithClass('~IDBConn', 'MySQLConn');
+        if (Math.random() > 0.5) {
 
-        const users = await container.get<IUserManager>('UserManager');
+            console.log('Using PgSQL.');
+            container.getScope().bind('~IDBConn', 'PgSQLConn');
+        }
+        else {
+
+            console.log('Using MySQL.');
+            container.getScope().bind('~IDBConn', 'MySQLConn');
+        }
+
+        const users = await container.get<IUserManager>('UserManager', {
+            binds: {
+                '@adminId': 1,
+                '@dbconfig': 1,
+            }
+        });
 
         console.log(users.getRoleById(123));
         console.log(users.getRoleById(1));
         console.log(users.getUserList());
-
-        console.log((await container.get<IRoleDAO>('~IRoleDAO@ccc')).getRoleById(444));
 
         await container.destroy();
     }
@@ -48,5 +57,7 @@ import { IUserManager } from './Services/UserManager';
 
         console.error(e);
     }
+
+    console.info('bye bye');
 
 })().catch(console.error);

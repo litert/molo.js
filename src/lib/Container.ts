@@ -20,15 +20,46 @@ import * as I from './_internal';
 import * as Symbols from './_internal/Symbols';
 import { Scope } from './_internal/Scope';
 import { getGlobalRegistry } from './Registry';
-import { Builder } from './_internal/Builder';
+import { Utils } from './_internal/Utils';
+
+class BuildContext {
+
+    public bind?: I.ITargetExpress;
+
+    public constructor(
+        public rootExpr: I.ITargetExpress,
+        public scope: I.IScope,
+        public injects: Array<Record<string, any>> = [],
+        public expr: I.ITargetExpress = rootExpr,
+        public buildPath: string[] = [expr.fullExpr]
+    ) {}
+
+    public fork(newExpr: I.ITargetExpress): BuildContext {
+
+        const newInjects = this.scope.findExtraBindings(newExpr.fullExpr);
+
+        return new BuildContext(
+            this.rootExpr,
+            this.scope,
+            newInjects ? [...this.injects, newInjects] : this.injects,
+            newExpr,
+            [...this.buildPath, newExpr.fullExpr]
+        );
+    }
+
+    public prepareInjects(): Record<string, any> {
+
+        return this.injects.slice().reverse().reduce((p, q) => ({ ...p, ...q }), {});
+    }
+}
 
 class Container implements C.IContainer {
+
+    private _ = new Utils();
 
     private readonly _scopes: Record<string, I.IScope>;
 
     private _scopeSeq: I.IScope[];
-
-    private readonly _builder: I.IBuilder;
 
     private readonly _classes: I.IClassManager;
 
@@ -39,7 +70,6 @@ class Container implements C.IContainer {
         };
         this._scopeSeq = [this._scopes[Symbols.K_GLOBAL_SCOPE]];
         this._classes = registry.getClassManager();
-        this._builder = new Builder(this._classes);
     }
 
     public createScope(name: string, baseScope?: string): C.IScope {
@@ -103,35 +133,6 @@ class Container implements C.IContainer {
         return ret;
     }
 
-    public getGlobalScope(): C.IScope {
-
-        return this._scopes[Symbols.K_GLOBAL_SCOPE];
-    }
-
-    public async get(injection: string, opts?: C.IInstantiationOptions): Promise<any> {
-
-        if (!opts) {
-
-            opts = {};
-        }
-
-        if (typeof opts.scope === 'string') {
-
-            opts.scope = this._scopes[Symbols.K_GLOBAL_SCOPE] as any;
-        }
-
-        const scope: I.IScope = opts.scope ?? this._scopes[Symbols.K_GLOBAL_SCOPE] as any;
-
-        let ret = this._builder.build(injection, scope, opts.alias);
-
-        if (ret instanceof Promise) {
-
-            ret = await ret;
-        }
-
-        return ret;
-    }
-
     public async destroy(): Promise<void> {
 
         while (1) {
@@ -143,7 +144,276 @@ class Container implements C.IContainer {
                 break;
             }
 
-            await scope.release();
+            await scope.destroy();
+        }
+    }
+
+    private _resolve(ctx: BuildContext): void {
+
+        if (ctx.expr.varName) {
+
+            ctx.bind = ctx.scope.findBind(ctx.expr.varName);
+
+            if (ctx.bind) {
+
+                return;
+            }
+        }
+
+        ctx.bind = ctx.scope.findBind(ctx.expr.fullExpr);
+
+        if (ctx.bind) {
+
+            return;
+        }
+
+        if (ctx.expr.typeExpr) {
+
+            ctx.bind = ctx.scope.findBind(ctx.expr.typeExpr);
+        }
+    }
+
+    private async _get(ctx: BuildContext): Promise<any> {
+
+        if (ctx.expr.varName) {
+
+            let ret = ctx.scope.getValue(ctx.expr.varName);
+
+            if (ret !== undefined) {
+
+                return ret;
+            }
+        }
+
+        if (ctx.expr.factoryMethod) {
+
+            return this._buildByFactory(ctx);
+        }
+
+        this._resolve(ctx);
+
+        if (ctx.bind) {
+
+            const ret = await this._get(ctx.fork(ctx.bind));
+
+            if (ctx.expr.varName) {
+
+                ctx.scope.bindValue(ctx.expr.varName, ret);
+            }
+
+            return ret;
+        }
+
+        const factoryMethods = this._classes.findFactoryMethodsByType(ctx.expr.typeName);
+
+        if (factoryMethods.length === 1) {
+
+            return this._buildByFactory(ctx.fork(this._.parseTargetExpression(
+                `${factoryMethods[0].parent}::${factoryMethods[0].name}`
+            )));
+        }
+
+        if (!ctx.expr.typeName) {
+
+            throw new E.E_FACTORY_NOT_FOUND({ 'buildStack': ctx.buildPath });
+        }
+
+        if (ctx.expr.isAbstract) {
+
+            const clsList = this._classes.findClassesByType(ctx.expr.typeName).filter((v) => !v.isPrivate);
+
+            if (clsList.length !== 1) {
+
+                throw new E.E_FACTORY_NOT_FOUND({
+                    'classType': ctx.expr.typeName,
+                    'classCandidates': clsList.map((v) => v.name),
+                    'buildStack': ctx.buildPath
+                });
+            }
+
+            return this._buildByClass(ctx, clsList[0]);
+        }
+        else {
+
+            return this._buildByClass(ctx, this._classes.get(ctx.expr.typeName));
+        }
+    }
+
+    private async _buildByClass(ctx: BuildContext, cls: I.IClassDescriptor): Promise<any> {
+
+        if (cls.isPrivate) {
+
+            throw new E.E_PRIVATE_CLASS({
+                'classType': ctx.expr.typeName,
+                'expr': ctx.expr.factoryExpr,
+                'buildStack': ctx.buildPath,
+                'class': cls.name
+            });
+        }
+
+        if (cls.isSingleton) {
+
+            const ret = ctx.scope.getSingleton(cls.name);
+
+            if (ret !== undefined) {
+
+                if (ctx.expr.varName !== undefined) {
+
+                    ctx.scope.bindValue(ctx.expr.varName, ret);
+                }
+
+                return ret;
+            }
+        }
+
+        const extInjects = ctx.prepareInjects();
+
+        const ctorArgs: any[] = [];
+
+        const props: Record<string, any> = {};
+
+        for (const a of cls.parameters) {
+
+            ctorArgs.push(await this._getInjection(a, ctx, extInjects));
+            // ctorArgs.push(await this.get(a.expr, { 'scope': ctx.scope }));
+        }
+
+        for (const propName in cls.properties) {
+
+            const p = cls.properties[propName];
+
+            props[propName] = await this._getInjection(p, ctx, extInjects);
+            // props[propName] = await this.get(p.expr, { 'scope': ctx.scope, injects: p.injects });
+        }
+
+        const obj = new cls.ctor(...ctorArgs);
+
+        for (const propName in props) {
+
+            obj[propName] = props[propName];
+        }
+
+        await this._prepareObject(obj, ctx, extInjects, cls);
+
+        if (cls.isSingleton) {
+
+            ctx.scope.setSingleton(cls.name, obj);
+        }
+
+        return obj;
+    }
+
+    private async _buildByFactory(ctx: BuildContext): Promise<any> {
+
+        const factoryObj = await this._get(ctx.fork(this._.parseTargetExpression(ctx.expr.factoryExpr)));
+        const factoryCls = this._classes.findClassByObject(factoryObj);
+
+        if (!factoryCls) {
+
+            throw new E.E_CLASS_NOT_FOUND({ 'expr': ctx.expr.factoryExpr, 'buildStack': ctx.buildPath });
+        }
+
+        const method = factoryCls.getMethod(ctx.expr.factoryMethod);
+
+        const fnArgs: any[] = [];
+
+        const extInjects = ctx.prepareInjects();
+
+        for (const a of method.parameters) {
+
+            fnArgs.push(await this._getInjection(a, ctx, extInjects));
+            // props[propName] = await this._getInjection(p, ctx, extInjects);
+        }
+
+        let obj = factoryObj[method.name](...fnArgs);
+
+        if (obj instanceof Promise) {
+
+            obj = await obj;
+        }
+
+        await this._prepareObject(obj, ctx, extInjects, this._classes.findClassByObject(obj));
+
+        return obj;
+    }
+
+    private async _getInjection(injection: I.IInjectOptions, ctx: BuildContext, extInjects: Record<string, any>): Promise<any> {
+
+        const extInjectValue = extInjects[injection.expr];
+
+        if (extInjectValue !== undefined) {
+
+            const extInjectExpr = extInjectValue?.[Symbols.K_INJECTION_EXPR] as I.IInjectOptions;
+
+            if (extInjectExpr) {
+
+                return this.get(extInjectExpr.expr, { 'scope': ctx.scope, binds: extInjectExpr.binds });
+            }
+            else {
+
+                return extInjectValue;
+            }
+        }
+
+        return this.get(injection.expr, { 'scope': ctx.scope, binds: injection.binds });
+    }
+
+    private async _prepareObject(obj: any, ctx: BuildContext, extInjects: Record<string, any>, cls?: I.IClassDescriptor): Promise<void> {
+
+        if (cls) {
+
+            if (cls.initializer) {
+
+                const method = cls.getMethod(cls.initializer);
+
+                const fnArgs: any[] = [];
+
+                for (const a of method.parameters) {
+
+                    fnArgs.push(await this._getInjection(a, ctx, extInjects));
+                    // fnArgs.push(await this.get(a.expr, { scope: ctx.scope }));
+                }
+
+                const result = obj[method.name](...fnArgs);
+
+                if (result instanceof Promise) {
+
+                    await result;
+                }
+            }
+
+            if (cls.uninitializer) {
+
+                ctx.scope.addUninitializer(obj, cls.uninitializer);
+            }
+        }
+
+        if (ctx.expr.varName) {
+
+            ctx.scope.bindValue(ctx.expr.varName, obj);
+        }
+    }
+
+    public async get(expr: string, opts?: C.IInstantiationOptions): Promise<any> {
+
+        const ctx = new BuildContext(
+            this._.parseTargetExpression(expr),
+            opts?.scope as I.IScope ?? this._scopes[Symbols.K_GLOBAL_SCOPE],
+            opts?.binds ? [opts.binds] : []
+        );
+
+        try {
+
+            return await this._get(ctx);
+        }
+        catch (e) {
+
+            if (e instanceof E.E_FACTORY_NOT_FOUND && ctx.rootExpr.optional) {
+
+                return undefined;
+            }
+
+            throw e;
         }
     }
 }

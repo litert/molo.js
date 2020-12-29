@@ -59,7 +59,14 @@ class Registry implements C.IRegistry, I.IRegistry {
 
         this._.checkClassName(name);
 
-        return this._ref.metadata(Symbols.K_NAME, name);
+        return this._ref.metadata(Symbols.K_CLASS_NAME, name);
+    }
+
+    public Prefix(prefix: string): ClassDecorator {
+
+        this._.checkClassName(prefix);
+
+        return this._ref.metadata(Symbols.K_CLASS_NAME_PREFIX, prefix);
     }
 
     public Type(types: string[]): ClassDecorator {
@@ -79,35 +86,42 @@ class Registry implements C.IRegistry, I.IRegistry {
         };
     }
 
-    public Inject(element: string): C.IInjectDecorator {
+    public Inject(expr: string, opts: C.IInjectOptions = {}): C.IInjectDecorator {
 
-        this._.checkInjectionExpression(element);
+        this._.checkTargetExpression(expr);
 
-        const inject: I.IInjectOptions = { injection: element };
+        const inject: I.IInjectOptions = {
+            'expr': expr,
+            'binds': opts.binds
+        };
 
-        return (...args: any[]): void => {
+        const decFn: C.IInjectDecorator = (...args: any[]): void => {
 
             if (this._ref.isForConstructorParameter(args)) {
 
-                this._ref.setMetadataOfConstructorParameter(args[0], args[2], Symbols.K_INJECT_NAME, inject);
+                this._ref.setMetadataOfConstructorParameter(args[0], args[2], Symbols.K_INJECTION, inject);
             }
             else if (this._ref.isForMethodParameter(args)) {
 
-                this._ref.setMetadataOfParameter(args[0], args[1], args[2], Symbols.K_INJECT_NAME, inject);
+                this._ref.setMetadataOfParameter(args[0], args[1], args[2], Symbols.K_INJECTION, inject);
             }
             else if (this._ref.isForProperty(args)) {
 
-                this._ref.setMetadataOfProperty(args[0], args[1], Symbols.K_INJECT_NAME, inject);
+                this._ref.setMetadataOfProperty(args[0], args[1], Symbols.K_INJECTION, inject);
             }
             else if (this._ref.isForClass(args)) {
 
-                console.warn(`[WARNING] Incorrect injection "${element}" for "${args[0].constructor.name}".`);
+                console.warn(`[WARNING] Incorrect injection "${expr}" for "${args[0].constructor.name}".`);
             }
             else if (this._ref.isForMethod(args)) {
 
-                console.warn(`[WARNING] Incorrect injection "${element}" for "${args[0].constructor.name}.prototype.${args[1] as string}".`);
+                console.warn(`[WARNING] Incorrect injection "${expr}" for "${args[0].constructor.name}.prototype.${args[1] as string}".`);
             }
         };
+
+        (decFn as any)[Symbols.K_INJECTION_EXPR] = inject;
+
+        return decFn;
     }
 
     public Singleton(): ClassDecorator {
