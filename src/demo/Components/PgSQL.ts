@@ -5,12 +5,12 @@ import { ILogger } from './Logger';
 @Molo.Type(['~IDBConn'])
 class PgSQLConn implements IDBConn {
 
-    @Molo.Inject('~logger', { binds: { '@subject': 'pgsql', '@levels': ['error', 'info'] } })
-    private _logger!: ILogger<'info' | 'error'>;
+    @Molo.Inject('~logger', { binds: { '@subject': 'pgsql', '@levels': ['error', 'info', 'warn'] } })
+    private _logs!: ILogger;
 
     public query(sql: string): any[] {
 
-        console.log(`query ${sql}`);
+        this._logs.info(`query ${sql}`);
         return [];
     }
 
@@ -23,18 +23,18 @@ class PgSQLConn implements IDBConn {
 
             if (Math.random() > 0.5) {
 
-                this._logger.info('connected to pgsql.');
+                this._logs.info('connected to pgsql.');
                 break;
             }
 
-            this._logger.error('failed to connect to pgsql, retrying...');
+            this._logs.error('failed to connect to pgsql, retrying...');
         }
     }
 
     @Molo.Uninitializer()
     public close(): void {
 
-        console.info('closing connection...');
+        this._logs.warn('closing connection...');
     }
 }
 

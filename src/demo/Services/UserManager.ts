@@ -15,6 +15,7 @@
  */
 
 import Molo from '../../lib';
+import { ILogger } from '../Components/Logger';
 import { IRoleDAO } from '../DAO/RoleDAO';
 
 export interface IUserDAO {
@@ -34,6 +35,9 @@ class UserManager {
     @Molo.Inject('UserDAO')
     private _dao!: IUserDAO;
 
+    @Molo.Inject('~logger', { binds: { '@subject': 'users', '@levels': ['error', 'info', 'warn'] } })
+    private _logs!: ILogger<'error' | 'info' | 'warn'>;
+
     public constructor(
         @Molo.Inject('~IRoleDAO')
         private _roleDAO: IRoleDAO,
@@ -42,7 +46,7 @@ class UserManager {
     @Molo.Initializer()
     public loadData(): void {
 
-        console.log('UserManager: Loading data...');
+        this._logs.info('loading data...');
     }
 
     public getUserList(): string[] {
@@ -60,7 +64,7 @@ class UserManager {
 
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        console.log('UserManager: bye bye');
+        this._logs.warn('bye bye');
     }
 }
 

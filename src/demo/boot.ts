@@ -15,6 +15,7 @@
  */
 
 import * as $Molo from '../lib';
+import { ILogger } from './Components/Logger';
 import { IUserManager } from './Services/UserManager';
 
 (async () => {
@@ -29,27 +30,34 @@ import { IUserManager } from './Services/UserManager';
 
         const container = $Molo.createContainer();
 
+        const logs = await container.get<ILogger>('~logger', {
+            'binds': {
+                '@subject': 'demo'
+            }
+        });
+
         if (Math.random() > 0.5) {
 
-            console.log('Using PgSQL.');
+            logs.info('Using PgSQL.');
             container.getScope().bind('~IDBConn', 'PgSQLConn');
         }
         else {
 
-            console.log('Using MySQL.');
+            logs.info('Using MySQL.');
             container.getScope().bind('~IDBConn', 'MySQLConn');
         }
+
+        container.getScope().bindValue('dbconfig', 1223);
 
         const users = await container.get<IUserManager>('UserManager', {
             binds: {
                 '@adminId': 1,
-                '@dbconfig': 1,
             }
         });
 
-        console.log(users.getRoleById(123));
-        console.log(users.getRoleById(1));
-        console.log(users.getUserList());
+        logs.info(users.getRoleById(123));
+        logs.info(users.getRoleById(1));
+        logs.info(users.getUserList().toString());
 
         await container.destroy();
     }

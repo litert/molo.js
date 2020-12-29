@@ -29,27 +29,22 @@ class BuildContext {
     public constructor(
         public rootExpr: I.ITargetExpress,
         public scope: I.IScope,
-        public injects: Array<Record<string, any>> = [],
+        public ctxBinds?: Record<string, any>,
         public expr: I.ITargetExpress = rootExpr,
         public buildPath: string[] = [expr.fullExpr]
     ) {}
 
     public fork(newExpr: I.ITargetExpress): BuildContext {
 
-        const newInjects = this.scope.findExtraBindings(newExpr.fullExpr);
+        const newCtxBinds = this.scope.findExtraBindings(newExpr.fullExpr);
 
         return new BuildContext(
             this.rootExpr,
             this.scope,
-            newInjects ? [...this.injects, newInjects] : this.injects,
+            newCtxBinds ? { ...newCtxBinds, ...this.ctxBinds } : this.ctxBinds,
             newExpr,
             [...this.buildPath, newExpr.fullExpr]
         );
-    }
-
-    public prepareInjects(): Record<string, any> {
-
-        return this.injects.slice().reverse().reduce((p, q) => ({ ...p, ...q }), {});
     }
 }
 
@@ -66,7 +61,7 @@ class Container implements C.IContainer {
     public constructor(registry: I.IRegistry) {
 
         this._scopes = {
-            [Symbols.K_GLOBAL_SCOPE]: new Scope('_global')
+            [Symbols.K_GLOBAL_SCOPE]: new Scope('_global').bindValue('molo.container', this)
         };
         this._scopeSeq = [this._scopes[Symbols.K_GLOBAL_SCOPE]];
         this._classes = registry.getClassManager();
@@ -185,6 +180,28 @@ class Container implements C.IContainer {
             }
         }
 
+        const ctxBind = ctx.ctxBinds?.[ctx.expr.varExpr] ?? ctx.ctxBinds?.[ctx.expr.typeExpr] ?? ctx.ctxBinds?.[ctx.expr.factoryExpr];
+
+        if (ctxBind !== undefined) {
+
+            const extBindExpr = ctxBind?.[Symbols.K_INJECTION_EXPR] as I.IInjectOptions;
+
+            if (extBindExpr) {
+
+                return this.get(extBindExpr.expr, {
+                    'scope': ctx.scope,
+                    'binds': {
+                        ...extBindExpr.binds,
+                        ...ctx.ctxBinds
+                    }
+                });
+            }
+            else {
+
+                return ctxBind;
+            }
+        }
+
         if (ctx.expr.factoryMethod) {
 
             return this._buildByFactory(ctx);
@@ -266,7 +283,7 @@ class Container implements C.IContainer {
             }
         }
 
-        const extInjects = ctx.prepareInjects();
+        const extInjects = ctx.ctxBinds ?? {};
 
         const ctorArgs: any[] = [];
 
@@ -317,7 +334,7 @@ class Container implements C.IContainer {
 
         const fnArgs: any[] = [];
 
-        const extInjects = ctx.prepareInjects();
+        const extInjects = ctx.ctxBinds ?? {};
 
         for (const a of method.parameters) {
 
@@ -343,11 +360,17 @@ class Container implements C.IContainer {
 
         if (extInjectValue !== undefined) {
 
-            const extInjectExpr = extInjectValue?.[Symbols.K_INJECTION_EXPR] as I.IInjectOptions;
+            const extBindExpr = extInjectValue?.[Symbols.K_INJECTION_EXPR] as I.IInjectOptions;
 
-            if (extInjectExpr) {
+            if (extBindExpr) {
 
-                return this.get(extInjectExpr.expr, { 'scope': ctx.scope, binds: extInjectExpr.binds });
+                return this.get(extBindExpr.expr, {
+                    'scope': ctx.scope,
+                    'binds': {
+                        ...extBindExpr.binds,
+                        ...ctx.ctxBinds
+                    }
+                });
             }
             else {
 
@@ -355,7 +378,13 @@ class Container implements C.IContainer {
             }
         }
 
-        return this.get(injection.expr, { 'scope': ctx.scope, binds: injection.binds });
+        return this.get(injection.expr, {
+            'scope': ctx.scope,
+            'binds': {
+                ...injection.binds,
+                ...ctx.ctxBinds
+            }
+        });
     }
 
     private async _prepareObject(obj: any, ctx: BuildContext, extInjects: Record<string, any>, cls?: I.IClassDescriptor): Promise<void> {
@@ -399,7 +428,7 @@ class Container implements C.IContainer {
         const ctx = new BuildContext(
             this._.parseTargetExpression(expr),
             opts?.scope as I.IScope ?? this._scopes[Symbols.K_GLOBAL_SCOPE],
-            opts?.binds ? [opts.binds] : []
+            opts?.binds
         );
 
         try {

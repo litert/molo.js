@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-import Molo from '../../lib';
+import Molo, { IContainer } from '../../lib';
 import { IDBConn } from '../Components/DBConn';
+import { ILogger } from '../Components/Logger';
 
 export interface IRoleDAO {
 
@@ -26,7 +27,11 @@ export interface IRoleDAO {
 @Molo.Private()
 class RoleDAO implements IRoleDAO {
 
-    public constructor(private _db: IDBConn, private _adminId: number) {}
+    public constructor(
+        private _db: IDBConn,
+        private _adminId: number,
+        private _logs: ILogger
+    ) {}
 
     public getRoleById(id: number): string {
 
@@ -38,14 +43,14 @@ class RoleDAO implements IRoleDAO {
     @Molo.Uninitializer()
     public releaseData(): void {
 
-        console.log('RoleDAO: Uninitializing...');
+        this._logs.warn('Uninitializing...');
         return;
     }
 
     @Molo.Initializer()
     public init(): void {
 
-        console.log('Initializeing RoleDAO...');
+        this._logs.info('Initializeing...');
         return;
     }
 }
@@ -53,21 +58,29 @@ class RoleDAO implements IRoleDAO {
 @Molo.Singleton()
 class RoleDAOFactory {
 
+    @Molo.Inject('~logger', { 'binds': { '@subject': 'role_dao' } })
+    private _logs!: ILogger;
+
     @Molo.Provide('~IRoleDAO')
-    public createRoleDAO(
+    public async createRoleDAO(
     /* eslint-disable @typescript-eslint/indent */
         @Molo.Inject('~IDBConn@main')   db: IDBConn,
-        @Molo.Inject('@adminId')       adminId: number
+        @Molo.Inject('@adminId')        adminId: number,
+        @Molo.Inject('@molo.container') container: IContainer
     /* eslint-enable @typescript-eslint/indent */
-    ): IRoleDAO {
+    ): Promise<IRoleDAO> {
 
-        return new RoleDAO(db, adminId);
+        return new RoleDAO(
+            db,
+            adminId,
+            await container.get<ILogger>('~logger', { 'binds': { '@subject': 'role_dao' } })
+        );
     }
 
     @Molo.Initializer()
     protected _init(): void {
 
-        console.log('Preparing RoleDAO factory...');
+        this._logs.info('Preparing RoleDAO factory...');
     }
 }
 

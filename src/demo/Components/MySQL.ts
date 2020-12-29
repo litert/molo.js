@@ -5,8 +5,8 @@ import { ILogger } from './Logger';
 @Molo.Type(['~IDBConn'])
 class MySQLConn implements IDBConn {
 
-    @Molo.Inject('~logger', { binds: { '@subject': 'mysql', '@levels': ['error', 'info'] } })
-    private _logger!: ILogger<'info' | 'error'>;
+    @Molo.Inject('~logger', { binds: { '@subject': 'pgsql' } })
+    private _logs!: ILogger;
 
     public constructor(
         @Molo.Inject('@dbconfig') protected _config: any
@@ -23,24 +23,24 @@ class MySQLConn implements IDBConn {
 
             if (Math.random() > 0.5) {
 
-                this._logger.info('connected to mysql.');
+                this._logs.info('connected to mysql.');
                 break;
             }
 
-            this._logger.error('failed to connect to mysql, retrying...');
+            this._logs.error('failed to connect to mysql, retrying...');
         }
     }
 
     public query(sql: string): any[] {
 
-        this._logger.info(`query ${sql}`);
+        this._logs.info(`query ${sql}`);
         return [];
     }
 
     @Molo.Uninitializer()
     public close(): void {
 
-        this._logger.info('closing connection...');
+        this._logs.warn('closing connection...');
     }
 }
 
