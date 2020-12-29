@@ -60,7 +60,11 @@ export class ClassManager implements I.IClassManager {
 
     public add(theClass: C.IClassConstructor): void {
 
-        const name = this._ref.getMetadata(theClass, Symbols.K_CLASS_NAME) ?? theClass.name;
+        const prefix = this._ref.getMetadata(theClass, Symbols.K_CLASS_NAME_PREFIX) ?? '';
+
+        const clsName = this._ref.getMetadata(theClass, Symbols.K_CLASS_NAME) ?? theClass.name;
+
+        const name = prefix ? `${prefix}.${clsName}` : clsName;
 
         const params: I.IInjectOptions[] = [];
 

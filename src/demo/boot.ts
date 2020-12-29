@@ -49,7 +49,7 @@ import { IUserManager } from './Services/UserManager';
 
         container.getScope().bindValue('dbconfig', 1223);
 
-        const users = await container.get<IUserManager>('UserManager', {
+        const users = await container.get<IUserManager>('Molo.Demo.UserManager', {
             binds: {
                 '@adminId': 1,
             }

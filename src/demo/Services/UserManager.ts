@@ -30,6 +30,7 @@ export interface IUserManager {
     getUserList(): string[];
 }
 
+@Molo.Prefix('Molo.Demo')
 class UserManager {
 
     @Molo.Inject('UserDAO')
