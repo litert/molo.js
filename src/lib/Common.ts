@@ -124,6 +124,9 @@ export interface IScope {
      */
     bind(expr: string, dest: string, extBinds?: Record<string, any>): this;
 
+    /**
+     * Bind the value or injection express for the context.
+     */
     bindContext(expr: string, context: Record<string, any>): this;
 }
 
@@ -134,6 +137,9 @@ export interface IInstantiationOptions {
      */
     scope?: IScope;
 
+    /**
+     * The context bindings for injections.
+     */
     binds?: Record<string, any>;
 }
 
@@ -156,9 +162,9 @@ export interface IModuleScanner {
 export interface IContainer {
 
     /**
-     * Release all objects insides container.
+     * Free up all data insides container or specific scope.
      */
-    destroy(): Promise<void>;
+    destroy(scope?: string): Promise<void>;
 
     /**
      * Find registered classes by name pattern.
@@ -180,7 +186,7 @@ export interface IContainer {
      * @param name          The name of the new scope.
      * @param baseScope     The name of the based scope.
      */
-    createScope(name: string, baseScope?: string): IScope;
+    createScope(name: string, baseScope?: string | IScope): IScope;
 
     /**
      * Get a custom scope by name.

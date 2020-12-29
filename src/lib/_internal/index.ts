@@ -201,6 +201,26 @@ export interface IClassManager {
 export interface IScope extends C.IScope {
 
     /**
+     * Tell if this scope is referred by others.
+     */
+    isReferred(): boolean;
+
+    /**
+     * Free up all data stored inside this scope.
+     */
+    destory(): Promise<void>;
+
+    /**
+     * Increase the reference counter of current scope object.
+     */
+    ref(): void;
+
+    /**
+     * Decrease the reference counter of current scope object.
+     */
+    unref(): void;
+
+    /**
      * Find injection binding.
      *
      * @param expr  The required injection expression.
@@ -212,11 +232,9 @@ export interface IScope extends C.IScope {
      *
      * @param expr  The express to be searched.
      */
-    findExtraBindings(expr: string): Record<string, any> | undefined;
+    findContextBindings(expr: string): Record<string, any> | undefined;
 
     addUninitializer(obj: any, method: string): this;
-
-    destroy(): Promise<void>;
 
     /**
      * Get an object in the scope.

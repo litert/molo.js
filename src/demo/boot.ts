@@ -30,10 +30,13 @@ import { IUserManager } from './Services/UserManager';
 
         const container = $Molo.createContainer();
 
+        const scope = container.createScope('demo', container.getScope());
+
         const logs = await container.get<ILogger>('~logger', {
             'binds': {
                 '@subject': 'demo'
-            }
+            },
+            scope
         });
 
         if (Math.random() > 0.5) {
@@ -47,12 +50,11 @@ import { IUserManager } from './Services/UserManager';
             container.getScope().bind('~IDBConn', 'MySQLConn');
         }
 
-        container.getScope().bindValue('dbconfig', 1223);
+        scope.bindValue('dbconfig', 1223);
 
         const users = await container.get<IUserManager>('Molo.Demo.UserManager', {
-            binds: {
-                '@adminId': 1,
-            }
+            binds: { '@adminId': 1, },
+            scope
         });
 
         logs.info(users.getRoleById(123));
@@ -60,12 +62,14 @@ import { IUserManager } from './Services/UserManager';
         logs.info(users.getUserList().toString());
 
         await container.destroy();
+
+        logs.warn('bye bye');
     }
     catch (e) {
 
         console.error(e);
     }
 
-    console.info('bye bye');
+    console.info('quit');
 
 })().catch(console.error);

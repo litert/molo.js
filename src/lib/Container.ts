@@ -36,7 +36,7 @@ class BuildContext {
 
     public fork(newExpr: I.ITargetExpress): BuildContext {
 
-        const newCtxBinds = this.scope.findExtraBindings(newExpr.fullExpr);
+        const newCtxBinds = this.scope.findContextBindings(newExpr.fullExpr);
 
         return new BuildContext(
             this.rootExpr,
@@ -67,19 +67,24 @@ class Container implements C.IContainer {
         this._classes = registry.getClassManager();
     }
 
-    public createScope(name: string, baseScope?: string): C.IScope {
+    public createScope(name: string, baseScope?: string | I.IScope): C.IScope {
 
         if (this._scopes[name]) {
 
             throw new E.E_DUP_SCOPE({ name });
         }
 
-        if (baseScope && !this._scopes[baseScope]) {
+        if (typeof baseScope === 'string') {
 
-            throw new E.E_SCOPE_NOT_FOUND({ name: baseScope });
+            if (!this._scopes[baseScope]) {
+
+                throw new E.E_SCOPE_NOT_FOUND({ name: baseScope });
+            }
+
+            baseScope = this._scopes[baseScope];
         }
 
-        this._scopes[name] = new Scope(name, baseScope ? this._scopes[baseScope] : undefined);
+        this._scopes[name] = new Scope(name, baseScope);
 
         this._scopeSeq.push(this._scopes[name]);
 
@@ -128,7 +133,23 @@ class Container implements C.IContainer {
         return ret;
     }
 
-    public async destroy(): Promise<void> {
+    public async destroy(scopeName?: string): Promise<void> {
+
+        if (scopeName) {
+
+            const scope = this.getScope(scopeName) as I.IScope;
+
+            if (scope.isReferred()) {
+
+                throw new E.E_SCOPE_REFERRED({ 'name': scope.name });
+            }
+
+            this._scopeSeq.splice(this._scopeSeq.indexOf(scope), 1);
+
+            await scope.destory();
+
+            return;
+        }
 
         while (1) {
 
@@ -139,7 +160,7 @@ class Container implements C.IContainer {
                 break;
             }
 
-            await scope.destroy();
+            await scope.destory();
         }
     }
 

@@ -136,3 +136,10 @@ export const E_INVALID_INJECTION = exceptionRegistry.register({
     metadata: {},
     type: 'public'
 });
+
+export const E_SCOPE_REFERRED = exceptionRegistry.register({
+    name: 'scope_referred',
+    message: 'The scope has been referred by other scopes.',
+    metadata: {},
+    type: 'public'
+});

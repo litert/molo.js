@@ -15,6 +15,7 @@
  */
 
 import * as I from '.';
+import * as E from '../Errors';
 import { Utils } from './Utils';
 
 export class Scope implements I.IScope {
@@ -23,15 +24,30 @@ export class Scope implements I.IScope {
 
     private _vars: Record<string, any> = {};
 
-    private _contexts: Record<string, Record<string, any>> = {};
+    private _ctxBinds: Record<string, Record<string, any>> = {};
 
     private _singletons: Record<string, any> = {};
 
     private _uninit: Array<[any, string]> = [];
 
-    private _solutions: Record<string, I.ITargetExpress> = {};
+    private _binds: Record<string, I.ITargetExpress> = {};
 
-    public constructor(public readonly name: string, private _parent?: I.IScope) {}
+    private _refs: number = 0;
+
+    public constructor(public readonly name: string, private _parent?: I.IScope) {
+
+        _parent?.ref();
+    }
+
+    public ref(): void {
+
+        this._refs++;
+    }
+
+    public unref(): void {
+
+        this._refs--;
+    }
 
     public addUninitializer(obj: unknown, method: string): this {
 
@@ -40,11 +56,37 @@ export class Scope implements I.IScope {
         return this;
     }
 
-    public async destroy(): Promise<void> {
+    public isReferred(): boolean {
+
+        return !!this._refs;
+    }
+
+    public async destory(): Promise<void> {
+
+        if (this._refs) {
+
+            throw new E.E_SCOPE_REFERRED({ 'name': this.name });
+        }
+
+        const uninitList = this._uninit;
+
+        this._parent?.unref();
+        delete this._parent;
+
+        // @ts-ignore
+        delete this._singletons;
+        // @ts-ignore
+        delete this._binds;
+        // @ts-ignore
+        delete this._vars;
+        // @ts-ignore
+        delete this._uninit;
+        // @ts-ignore
+        delete this._ctxBinds;
 
         while (1) {
 
-            const [obj, method] = this._uninit.pop() ?? [null, ''];
+            const [obj, method] = uninitList.pop() ?? [null, ''];
 
             if (!obj) {
 
@@ -76,14 +118,14 @@ export class Scope implements I.IScope {
 
     public bindContext(expr: string, ctx: Record<string, any>): this {
 
-        this._contexts[expr] = ctx;
+        this._ctxBinds[expr] = ctx;
 
         return this;
     }
 
-    public findExtraBindings(expr: string): Record<string, any> | undefined {
+    public findContextBindings(expr: string): Record<string, any> | undefined {
 
-        return this._contexts[expr];
+        return this._ctxBinds[expr] ?? this._parent?.findContextBindings(expr);
     }
 
     public bind(srcExpr: string, dstExpr: string, injects?: Record<string, any>): this {
@@ -91,7 +133,7 @@ export class Scope implements I.IScope {
         this._.checkSourceExpression(srcExpr);
         const dst = this._.parseTargetExpression(dstExpr);
 
-        this._solutions[srcExpr] = dst;
+        this._binds[srcExpr] = dst;
 
         if (injects) {
 
@@ -103,7 +145,7 @@ export class Scope implements I.IScope {
 
     public findBind(expr: string): I.ITargetExpress | undefined {
 
-        return this._solutions[expr];
+        return this._binds[expr] ?? this._parent?.findBind(expr);
     }
 
     public getSingleton(name: string): any {
