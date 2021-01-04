@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Angus.Fenying <fenying@litert.org>
+ * Copyright 2021 Angus.Fenying <fenying@litert.org>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,12 +66,13 @@ export class Utils {
         }
 
         return {
-            fullExpr: expr,
+            'fullExpr': expr,
             'typeExpr': re[1],
             'typeName': re[3],
             'isAbstract': !!re[2],
             'varName': re[6],
             'varExpr': re[5],
+            'isScoped': re[6]?.startsWith('_')
         };
     }
 
@@ -95,15 +96,16 @@ export class Utils {
         }
 
         const ret: ITargetExpress = {
-            fullExpr: expr,
+            'fullExpr': expr,
             'typeExpr': re[3],
             'typeName': re[5],
             'isAbstract': !!re[4],
             'varExpr': re[7],
             'varName': re[8],
-            'optional': !!re[1],
+            'isOptional': !!re[1],
             'factoryMethod': re[11],
-            'factoryExpr': re[2]
+            'factoryExpr': re[2],
+            'isScoped': re[8]?.startsWith('_')
         };
 
         if (ret.factoryMethod && !ret.typeName && !ret.varName) {

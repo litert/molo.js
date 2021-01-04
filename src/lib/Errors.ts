@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Angus.Fenying <fenying@litert.org>
+ * Copyright 2021 Angus.Fenying <fenying@litert.org>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,6 +56,13 @@ export const E_MALFORMED_PRODUCT = exceptionRegistry.register({
 export const E_MALFORMED_INJECTION = exceptionRegistry.register({
     name: 'malformed_injection',
     message: 'The expression of an injection is malformed.',
+    metadata: {},
+    type: 'public'
+});
+
+export const E_CYCLE_FACTORY = exceptionRegistry.register({
+    name: 'cycle_factory',
+    message: 'There is loop cycle in the build path.',
     metadata: {},
     type: 'public'
 });

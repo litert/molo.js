@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Angus.Fenying <fenying@litert.org>
+ * Copyright 2021 Angus.Fenying <fenying@litert.org>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,20 @@ export type IInjectDecorator = (target: Object, propertyKey: string | symbol, in
 
 export interface IInjectOptions {
 
-    binds?: Record<string, any>;
+    /**
+     * The bindings for the injection.
+     */
+    'binds'?: Record<string, any>;
+
+    /**
+     * The default value while omitted.
+     */
+    'default'?: any;
+
+    /**
+     * The preprocessor of injected data.
+     */
+    'wrapper'?: (v: any) => any;
 }
 
 export interface IRegistry {
@@ -135,12 +148,22 @@ export interface IInstantiationOptions {
     /**
      * The custom scope. [Default: the global scope]
      */
-    scope?: IScope;
+    'scope'?: IScope;
 
     /**
      * The context bindings for injections.
      */
-    binds?: Record<string, any>;
+    'binds'?: Record<string, any>;
+
+    /**
+     * The default value while omitted.
+     */
+    'default'?: any;
+
+    /**
+     * The preprocessor of injected data.
+     */
+    'wrapper'?: (v: any) => any;
 }
 
 export interface IModuleScanner {

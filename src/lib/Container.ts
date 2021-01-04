@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Angus.Fenying <fenying@litert.org>
+ * Copyright 2021 Angus.Fenying <fenying@litert.org>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,8 @@ class BuildContext {
 
     public constructor(
         public rootExpr: I.ITargetExpress,
-        public scope: I.IScope,
+        public rootScope: I.IScope,
+        public ctxScope: I.IScope,
         public ctxBinds?: Record<string, any>,
         public expr: I.ITargetExpress = rootExpr,
         public buildPath: string[] = [expr.fullExpr]
@@ -36,12 +37,13 @@ class BuildContext {
 
     public fork(newExpr: I.ITargetExpress): BuildContext {
 
-        const newCtxBinds = this.scope.findContextBindings(newExpr.fullExpr);
+        const newCtxBinds = this.rootScope.findContextBindings(newExpr.fullExpr);
 
         return new BuildContext(
             this.rootExpr,
-            this.scope,
-            newCtxBinds ? { ...newCtxBinds, ...this.ctxBinds } : this.ctxBinds,
+            this.rootScope,
+            this.ctxScope,
+            newCtxBinds ? { ...this.ctxBinds, ...newCtxBinds } : this.ctxBinds,
             newExpr,
             [...this.buildPath, newExpr.fullExpr]
         );
@@ -89,6 +91,11 @@ class Container implements C.IContainer {
         this._scopeSeq.push(this._scopes[name]);
 
         return this._scopes[name];
+    }
+
+    private _createAnonymousScope(baseScope?: string | I.IScope): I.IScope {
+
+        return this.createScope(Symbol('anonymous_sope') as any, baseScope) as I.IScope;
     }
 
     public getClassesByPattern(pattern: RegExp): Record<string, C.IClassConstructor> {
@@ -168,7 +175,7 @@ class Container implements C.IContainer {
 
         if (ctx.expr.varName) {
 
-            ctx.bind = ctx.scope.findBind(ctx.expr.varName);
+            ctx.bind = ctx.rootScope.findBind(ctx.expr.varName);
 
             if (ctx.bind) {
 
@@ -176,7 +183,7 @@ class Container implements C.IContainer {
             }
         }
 
-        ctx.bind = ctx.scope.findBind(ctx.expr.fullExpr);
+        ctx.bind = ctx.rootScope.findBind(ctx.expr.fullExpr);
 
         if (ctx.bind) {
 
@@ -185,15 +192,20 @@ class Container implements C.IContainer {
 
         if (ctx.expr.typeExpr) {
 
-            ctx.bind = ctx.scope.findBind(ctx.expr.typeExpr);
+            ctx.bind = ctx.rootScope.findBind(ctx.expr.typeExpr);
         }
     }
 
-    private async _get(ctx: BuildContext): Promise<any> {
+    private async _doGet(ctx: BuildContext): Promise<any> {
+
+        if (ctx.buildPath.filter((v) => v === ctx.expr.fullExpr).length > 1) {
+
+            throw new E.E_CYCLE_FACTORY({ 'buildStack': ctx.buildPath });
+        }
 
         if (ctx.expr.varName) {
 
-            let ret = ctx.scope.getValue(ctx.expr.varName);
+            let ret = ctx.ctxScope.getValue(ctx.expr.varName);
 
             if (ret !== undefined) {
 
@@ -209,12 +221,13 @@ class Container implements C.IContainer {
 
             if (extBindExpr) {
 
-                return this.get(extBindExpr.expr, {
-                    'scope': ctx.scope,
+                return this._get(ctx.rootScope, ctx.ctxScope, extBindExpr.expr, {
                     'binds': {
+                        ...ctx.ctxBinds,
                         ...extBindExpr.binds,
-                        ...ctx.ctxBinds
-                    }
+                    },
+                    'default': extBindExpr.default,
+                    'wrapper': extBindExpr.wrapper
                 });
             }
             else {
@@ -232,11 +245,18 @@ class Container implements C.IContainer {
 
         if (ctx.bind) {
 
-            const ret = await this._get(ctx.fork(ctx.bind));
+            const ret = await this._doGet(ctx.fork(ctx.bind));
 
             if (ctx.expr.varName) {
 
-                ctx.scope.bindValue(ctx.expr.varName, ret);
+                if (ctx.expr.isScoped) {
+
+                    ctx.ctxScope.bindValue(ctx.expr.varName, ret);
+                }
+                else {
+
+                    ctx.rootScope.bindValue(ctx.expr.varName, ret);
+                }
             }
 
             return ret;
@@ -291,13 +311,20 @@ class Container implements C.IContainer {
 
         if (cls.isSingleton) {
 
-            const ret = ctx.scope.getSingleton(cls.name);
+            const ret = ctx.rootScope.getSingleton(cls.name);
 
             if (ret !== undefined) {
 
                 if (ctx.expr.varName !== undefined) {
 
-                    ctx.scope.bindValue(ctx.expr.varName, ret);
+                    if (ctx.expr.isScoped) {
+
+                        ctx.ctxScope.bindValue(ctx.expr.varName, ret);
+                    }
+                    else {
+
+                        ctx.rootScope.bindValue(ctx.expr.varName, ret);
+                    }
                 }
 
                 return ret;
@@ -335,7 +362,7 @@ class Container implements C.IContainer {
 
         if (cls.isSingleton) {
 
-            ctx.scope.setSingleton(cls.name, obj);
+            ctx.rootScope.setSingleton(cls.name, obj);
         }
 
         return obj;
@@ -343,7 +370,7 @@ class Container implements C.IContainer {
 
     private async _buildByFactory(ctx: BuildContext): Promise<any> {
 
-        const factoryObj = await this._get(ctx.fork(this._.parseTargetExpression(ctx.expr.factoryExpr)));
+        const factoryObj = await this._doGet(ctx.fork(this._.parseTargetExpression(ctx.expr.factoryExpr)));
         const factoryCls = this._classes.findClassByObject(factoryObj);
 
         if (!factoryCls) {
@@ -385,12 +412,13 @@ class Container implements C.IContainer {
 
             if (extBindExpr) {
 
-                return this.get(extBindExpr.expr, {
-                    'scope': ctx.scope,
+                return this._get(ctx.rootScope, ctx.ctxScope, extBindExpr.expr, {
                     'binds': {
+                        ...ctx.ctxBinds,
                         ...extBindExpr.binds,
-                        ...ctx.ctxBinds
-                    }
+                    },
+                    'default': extBindExpr.default,
+                    'wrapper': extBindExpr.wrapper
                 });
             }
             else {
@@ -399,12 +427,13 @@ class Container implements C.IContainer {
             }
         }
 
-        return this.get(injection.expr, {
-            'scope': ctx.scope,
+        return this._get(ctx.rootScope, ctx.ctxScope, injection.expr, {
             'binds': {
+                ...ctx.ctxBinds,
                 ...injection.binds,
-                ...ctx.ctxBinds
-            }
+            },
+            'default': injection.default,
+            'wrapper': injection.wrapper
         });
     }
 
@@ -434,37 +463,54 @@ class Container implements C.IContainer {
 
             if (cls.uninitializer) {
 
-                ctx.scope.addUninitializer(obj, cls.uninitializer);
+                ctx.rootScope.addUninitializer(obj, cls.uninitializer);
             }
         }
 
         if (ctx.expr.varName) {
 
-            ctx.scope.bindValue(ctx.expr.varName, obj);
+            if (ctx.expr.isScoped) {
+
+                ctx.ctxScope.bindValue(ctx.expr.varName, obj);
+            }
+            else {
+
+                ctx.rootScope.bindValue(ctx.expr.varName, obj);
+            }
         }
     }
 
-    public async get(expr: string, opts?: C.IInstantiationOptions): Promise<any> {
+    private async _get(rootScope: I.IScope, ctxScope: I.IScope, expr: string, opts?: C.IInstantiationOptions): Promise<any> {
 
         const ctx = new BuildContext(
             this._.parseTargetExpression(expr),
-            opts?.scope as I.IScope ?? this._scopes[Symbols.K_GLOBAL_SCOPE],
+            rootScope,
+            ctxScope,
             opts?.binds
         );
 
         try {
 
-            return await this._get(ctx);
+            const ret = await this._doGet(ctx);
+
+            return opts?.wrapper ? opts.wrapper(ret) : ret;
         }
         catch (e) {
 
-            if (e instanceof E.E_FACTORY_NOT_FOUND && ctx.rootExpr.optional) {
+            if (e instanceof E.E_FACTORY_NOT_FOUND && ctx.rootExpr.isOptional) {
 
-                return undefined;
+                return opts?.default;
             }
 
             throw e;
         }
+    }
+
+    public async get(expr: string, opts?: C.IInstantiationOptions): Promise<any> {
+
+        const scope = opts?.scope as I.IScope ?? this._scopes[Symbols.K_GLOBAL_SCOPE];
+
+        return await this._get(scope, this._createAnonymousScope(scope), expr, opts);
     }
 }
 

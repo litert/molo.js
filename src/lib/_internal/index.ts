@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Angus.Fenying <fenying@litert.org>
+ * Copyright 2021 Angus.Fenying <fenying@litert.org>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -258,7 +258,7 @@ export interface IScope extends C.IScope {
     setSingleton(name: string, singleton: any): void;
 }
 
-export interface ISourceExpress {
+export type ISourceExpress = Readonly<{
 
     /**
      * The full express.
@@ -290,15 +290,29 @@ export interface ISourceExpress {
      * Tell if it's an abstract type.
      */
     isAbstract: boolean;
-}
+
+    /**
+     * Tell if it's a scoped variable.
+     */
+    isScoped: boolean;
+}>;
 
 export interface ITargetExpress extends ISourceExpress {
 
-    optional: boolean;
+    /**
+     * Tell if it's optional.
+     */
+    readonly isOptional: boolean;
 
-    factoryMethod: string;
+    /**
+     * The name of factory method.
+     */
+    readonly factoryMethod: string;
 
-    factoryExpr: string;
+    /**
+     * The expression of factory object.
+     */
+    readonly factoryExpr: string;
 }
 
 export interface IBuilder {
@@ -313,12 +327,10 @@ export interface IBuilder {
     build(injection: string, scope: IScope, alias?: string): any;
 }
 
-export interface IInjectOptions {
+export interface IInjectOptions extends C.IInjectOptions {
 
     /**
      * The injection expression.
      */
-    expr: string;
-
-    binds?: Record<string, any>;
+    'expr': string;
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Angus.Fenying <fenying@litert.org>
+ * Copyright 2021 Angus.Fenying <fenying@litert.org>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,9 +57,9 @@ import { IUserManager } from './Services/UserManager';
             scope
         });
 
-        logs.info(users.getRoleById(123));
-        logs.info(users.getRoleById(1));
-        logs.info(users.getUserList().toString());
+        logs.info(`The role for user 1 is ${users.getRoleById(1)}.`);
+        logs.info(`The role for user 123 is ${users.getRoleById(123)}.`);
+        logs.info(`The first user is ${users.getUserList()[0]}`);
 
         await container.destroy();
 

@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Angus.Fenying <fenying@litert.org>
+ * Copyright 2021 Angus.Fenying <fenying@litert.org>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -125,7 +125,7 @@ export class Scope implements I.IScope {
 
     public findContextBindings(expr: string): Record<string, any> | undefined {
 
-        return this._ctxBinds[expr] ?? this._parent?.findContextBindings(expr);
+        return (this._ctxBinds[expr] ? { ...this._ctxBinds[expr] } : undefined) ?? this._parent?.findContextBindings(expr);
     }
 
     public bind(srcExpr: string, dstExpr: string, injects?: Record<string, any>): this {

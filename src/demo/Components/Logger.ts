@@ -19,7 +19,7 @@ class LoggerFactory {
 
         for (const lv of levels) {
 
-            ret[lv] = (text) => console.log(`[${new Date().toISOString()}][${subject}][${lv}] ${text}`);
+            ret[lv] = (text) => console.log(`[${new Date().toISOString()}][${subject.padEnd(10)}][${lv}] ${text}`);
         }
 
         return ret;
