@@ -17,7 +17,7 @@
 import * as I from '.';
 import * as C from '../Common';
 import * as E from '../Errors';
-import * as Symbols from './Symbols';
+import * as Constants from './Constants';
 import { IReflectManager } from '@litert/reflect';
 import { MethodDescriptor } from './MethodDescriptor';
 
@@ -47,7 +47,7 @@ export class ClassDescriptor implements I.IClassDescriptor {
 
         for (const methodName of ref.getOwnMethodNames(ctor)) {
 
-            const product = ref.getMetadataOfMethod(ctor, methodName, Symbols.K_PRODUCT);
+            const product = ref.getMetadataOfMethod(ctor, methodName, Constants.K_PRODUCT);
 
             let isMoloFn: boolean = false;
 
@@ -56,7 +56,7 @@ export class ClassDescriptor implements I.IClassDescriptor {
                 isMoloFn = true;
             }
 
-            if (ref.getMetadataOfMethod(ctor, methodName, Symbols.K_INITIALIZER)) {
+            if (ref.getMetadataOfMethod(ctor, methodName, Constants.K_INITIALIZER)) {
 
                 isMoloFn = true;
 
@@ -71,7 +71,7 @@ export class ClassDescriptor implements I.IClassDescriptor {
                 this.initializer = methodName as string;
             }
 
-            if (ref.getMetadataOfMethod(ctor, methodName, Symbols.K_UNINITIALIZER)) {
+            if (ref.getMetadataOfMethod(ctor, methodName, Constants.K_UNINITIALIZER)) {
 
                 if (this.uninitializer) {
 
@@ -103,7 +103,7 @@ export class ClassDescriptor implements I.IClassDescriptor {
 
             for (let i = 0; ; i++) {
 
-                const injectType = ref.getMetadataOfParameter(ctor, methodName, i, Symbols.K_INJECTION);
+                const injectType = ref.getMetadataOfParameter(ctor, methodName, i, Constants.K_INJECTION);
 
                 if (this.uninitializer === methodName) {
 

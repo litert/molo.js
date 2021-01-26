@@ -16,7 +16,9 @@
 
 import * as $Molo from '../lib';
 import { ILogger } from './Components/Logger';
-import { IUserManager } from './Services/UserManager';
+import { MOLO_MYSQL_CONNECTION } from './Components/MySQL';
+import { MOLO_PGSQL_CONNECTION } from './Components/PgSQL';
+import { IUserManager, MOLO_USER_MANAGER } from './Services/UserManager';
 
 (async () => {
 
@@ -42,17 +44,17 @@ import { IUserManager } from './Services/UserManager';
         if (Math.random() > 0.5) {
 
             logs.info('Using PgSQL.');
-            container.getScope().bind('~IDBConn', 'PgSQLConn');
+            container.getScope().bind('~IDBConn', MOLO_PGSQL_CONNECTION);
         }
         else {
 
             logs.info('Using MySQL.');
-            container.getScope().bind('~IDBConn', 'MySQLConn');
+            container.getScope().bind('~IDBConn', MOLO_MYSQL_CONNECTION);
         }
 
         scope.bindValue('dbconfig', 1223);
 
-        const users = await container.get<IUserManager>('Molo.Demo.UserManager', {
+        const users = await container.get<IUserManager>(MOLO_USER_MANAGER, {
             binds: { '@adminId': 1, },
             scope
         });

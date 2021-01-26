@@ -92,9 +92,11 @@ export interface IRegistry {
      *
      * > NOTICE: When using multiple name on a same class, only the last one will be applied.
      *
+     * > If `null` is set, then a random name will be used for determined class.
+     *
      * @param name      The alter name of the class.
      */
-    Name(name: string): ClassDecorator;
+    Name(name: string | null): ClassDecorator;
 
     /**
      * Setup the prefix of class name.
@@ -110,7 +112,7 @@ export interface IRegistry {
      *
      * @param theClass The class to be imported.
      */
-    use(...theClass: IClassConstructor[]): this;
+    use(...theClass: IClassConstructor[]): string[];
 }
 
 export interface IScope {

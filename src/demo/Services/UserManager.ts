@@ -69,4 +69,4 @@ class UserManager {
     }
 }
 
-Molo.use(UserManager);
+export const [MOLO_USER_MANAGER] = Molo.use(UserManager);

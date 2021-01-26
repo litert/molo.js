@@ -3,9 +3,10 @@ import { IDBConn } from './DBConn';
 import { ILogger } from './Logger';
 
 @Molo.Type(['~IDBConn'])
+@Molo.Name(null)
 class MySQLConn implements IDBConn {
 
-    @Molo.Inject('~logger', { binds: { '@subject': 'pgsql' } })
+    @Molo.Inject('~logger', { binds: { '@subject': 'mysql' } })
     private _logs!: ILogger;
 
     public constructor(
@@ -44,4 +45,4 @@ class MySQLConn implements IDBConn {
     }
 }
 
-Molo.use(MySQLConn);
+export const [MOLO_MYSQL_CONNECTION] = Molo.use(MySQLConn);

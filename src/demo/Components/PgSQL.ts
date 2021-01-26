@@ -38,4 +38,4 @@ class PgSQLConn implements IDBConn {
     }
 }
 
-Molo.use(PgSQLConn);
+export const [MOLO_PGSQL_CONNECTION] = Molo.use(PgSQLConn);

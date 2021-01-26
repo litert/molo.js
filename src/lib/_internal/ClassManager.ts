@@ -17,9 +17,10 @@
 import * as I from '.';
 import * as C from '../Common';
 import * as E from '../Errors';
-import * as Symbols from './Symbols';
+import * as Constants from './Constants';
 import { IReflectManager } from '@litert/reflect';
 import { ClassDescriptor } from './ClassDescriptor';
+import { Utils } from './Utils';
 
 export class ClassManager implements I.IClassManager {
 
@@ -28,6 +29,7 @@ export class ClassManager implements I.IClassManager {
     private _ctorMap: Map<any, ClassDescriptor> = new Map();
 
     public constructor(
+        private _: Utils,
         private _ref: IReflectManager
     ) {}
 
@@ -58,11 +60,15 @@ export class ClassManager implements I.IClassManager {
         return this.get(className).getMethod(methodName);
     }
 
-    public add(theClass: C.IClassConstructor): void {
+    public add(theClass: C.IClassConstructor): string {
 
-        const prefix = this._ref.getMetadata(theClass, Symbols.K_CLASS_NAME_PREFIX) ?? '';
+        const prefix = this._ref.getMetadata(theClass, Constants.K_CLASS_NAME_PREFIX) ?? '';
 
-        const clsName = this._ref.getMetadata(theClass, Symbols.K_CLASS_NAME) ?? theClass.name;
+        const specifiedName = this._ref.getMetadata(theClass, Constants.K_CLASS_NAME);
+
+        const clsName = specifiedName === null ?
+            this._.randomName() :
+            (specifiedName ?? theClass.name);
 
         const name = prefix ? `${prefix}.${clsName}` : clsName;
 
@@ -70,13 +76,13 @@ export class ClassManager implements I.IClassManager {
 
         const props: Record<string, I.IInjectOptions> = {};
 
-        const isPrivate = this._ref.getMetadata(theClass, Symbols.K_IS_PRIVATE) ?? false;
+        const isPrivate = this._ref.getMetadata(theClass, Constants.K_IS_PRIVATE) ?? false;
 
         if (!isPrivate) {
 
             for (let i = 0; ; i++) {
 
-                const p = this._ref.getMetadataOfConstructorParameter(theClass, i, Symbols.K_INJECTION);
+                const p = this._ref.getMetadataOfConstructorParameter(theClass, i, Constants.K_INJECTION);
 
                 if (!p) {
 
@@ -93,7 +99,7 @@ export class ClassManager implements I.IClassManager {
 
             for (const p of this._ref.getOwnPropertyNames(theClass)) {
 
-                const inject = this._ref.getMetadataOfProperty(theClass, p, Symbols.K_INJECTION);
+                const inject = this._ref.getMetadataOfProperty(theClass, p, Constants.K_INJECTION);
 
                 if (inject) {
 
@@ -104,9 +110,9 @@ export class ClassManager implements I.IClassManager {
 
         this._classes[name] = new ClassDescriptor(
             name,
-            this._ref.getMetadata(theClass, Symbols.K_TYPES) ?? [],
+            this._ref.getMetadata(theClass, Constants.K_TYPES) ?? [],
             theClass,
-            this._ref.getMetadata(theClass, Symbols.K_IS_SINGLETON) ?? false,
+            this._ref.getMetadata(theClass, Constants.K_IS_SINGLETON) ?? false,
             isPrivate,
             params,
             props,
@@ -114,6 +120,8 @@ export class ClassManager implements I.IClassManager {
         );
 
         this._ctorMap.set(theClass, this._classes[name]);
+
+        return name;
     }
 
     public findClassesByNamePattern(pattern: RegExp): I.IClassDescriptor[] {

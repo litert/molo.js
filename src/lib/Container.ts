@@ -17,7 +17,7 @@
 import * as C from './Common';
 import * as E from './Errors';
 import * as I from './_internal';
-import * as Symbols from './_internal/Symbols';
+import * as Constants from './_internal/Constants';
 import { Scope } from './_internal/Scope';
 import { getGlobalRegistry } from './Registry';
 import { Utils } from './_internal/Utils';
@@ -63,9 +63,9 @@ class Container implements C.IContainer {
     public constructor(registry: I.IRegistry) {
 
         this._scopes = {
-            [Symbols.K_GLOBAL_SCOPE]: new Scope('_global').bindValue('molo.container', this)
+            [Constants.K_GLOBAL_SCOPE]: new Scope('_global').bindValue('molo.container', this)
         };
-        this._scopeSeq = [this._scopes[Symbols.K_GLOBAL_SCOPE]];
+        this._scopeSeq = [this._scopes[Constants.K_GLOBAL_SCOPE]];
         this._classes = registry.getClassManager();
     }
 
@@ -130,7 +130,7 @@ class Container implements C.IContainer {
 
     public getScope(name?: string): C.IScope {
 
-        const ret = this._scopes[name ?? Symbols.K_GLOBAL_SCOPE];
+        const ret = this._scopes[name ?? Constants.K_GLOBAL_SCOPE];
 
         if (!ret) {
 
@@ -205,7 +205,7 @@ class Container implements C.IContainer {
 
         if (ctx.expr.varName) {
 
-            let ret = ctx.ctxScope.getValue(ctx.expr.varName);
+            const ret = ctx.ctxScope.getValue(ctx.expr.varName);
 
             if (ret !== undefined) {
 
@@ -217,7 +217,7 @@ class Container implements C.IContainer {
 
         if (ctxBind !== undefined) {
 
-            const extBindExpr = ctxBind?.[Symbols.K_INJECTION_EXPR] as I.IInjectOptions;
+            const extBindExpr = ctxBind?.[Constants.K_INJECTION_EXPR] as I.IInjectOptions;
 
             if (extBindExpr) {
 
@@ -408,7 +408,7 @@ class Container implements C.IContainer {
 
         if (extInjectValue !== undefined) {
 
-            const extBindExpr = extInjectValue?.[Symbols.K_INJECTION_EXPR] as I.IInjectOptions;
+            const extBindExpr = extInjectValue?.[Constants.K_INJECTION_EXPR] as I.IInjectOptions;
 
             if (extBindExpr) {
 
@@ -508,7 +508,7 @@ class Container implements C.IContainer {
 
     public async get(expr: string, opts?: C.IInstantiationOptions): Promise<any> {
 
-        const scope = opts?.scope as I.IScope ?? this._scopes[Symbols.K_GLOBAL_SCOPE];
+        const scope = opts?.scope as I.IScope ?? this._scopes[Constants.K_GLOBAL_SCOPE];
 
         return await this._get(scope, this._createAnonymousScope(scope), expr, opts);
     }

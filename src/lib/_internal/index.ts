@@ -176,7 +176,7 @@ export interface IClassManager {
      *
      * @param theClass The ctor of the class.
      */
-    add(theClass: C.IClassConstructor): void;
+    add(theClass: C.IClassConstructor): string;
 
     /**
      * Tell if a class exists by name.

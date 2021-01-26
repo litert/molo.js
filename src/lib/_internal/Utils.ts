@@ -24,7 +24,22 @@ const REGEXP_TYPE_NAME = /^~[a-z_]\w*(\.[a-z_]\w*)*$/i;
 const REGEXP_VAR_NAME = /^[a-z_]\w*(\.[a-z_]\w*)*$/i;
 const REGEXP_PRODUCT = /^(~?)([a-z_]\w*(\.[a-z_]\w*)*)$/i;
 
+const RANDOM_NAME_SEED_FC = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const RANDOM_NAME_SEED = `${RANDOM_NAME_SEED_FC}01234567890_`;
+
 export class Utils {
+
+    public randomName(): string {
+
+        let ret = RANDOM_NAME_SEED_FC[Math.floor(RANDOM_NAME_SEED_FC.length * Math.random())];
+
+        for (let i = 0; i < 23; i++) {
+
+            ret += RANDOM_NAME_SEED[Math.floor(RANDOM_NAME_SEED.length * Math.random())];
+        }
+
+        return ret;
+    }
 
     public validateClassType(expr: string): boolean {
 
